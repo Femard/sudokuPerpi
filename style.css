@@ -1,0 +1,333 @@
+:root {
+    /* Colors representing Perpignan / Catalans */
+    --sang-et-or-red: #da121a; /* True Catalan red */
+    --sang-et-or-yellow: #fcd116; /* True Catalan yellow */
+    --bg-color: #fcd116;
+    --text-primary: #1a1a1a;
+    --text-secondary: #5a5a5a;
+    --board-bg: #FFFFFF;
+    --board-border: #da121a;
+    --cell-border: #e0e0e0;
+    --cell-bg-hover: #fff9e6;
+    --cell-bg-selected: #ffe680;
+    --cell-bg-given: #fdfdfd;
+    --cell-error: #ffcdd2;
+    
+    /* Letter specific colors (9 distinct colors) */
+    --color-1: #e53935; /* Red (P1) */
+    --color-2: #f57c00; /* Orange (E) */
+    --color-3: #fbc02d; /* Gold (R) */
+    --color-4: #43a047; /* Green (P2) */
+    --color-5: #00acc1; /* Teal (I) */
+    --color-6: #1e88e5; /* Blue (G) */
+    --color-7: #3949ab; /* Indigo (N1) */
+    --color-8: #8e24aa; /* Purple (A) */
+    --color-9: #d81b60; /* Pink (N2) */
+
+    
+    /* Shadows & Transitions */
+    --shadow-sm: 0 2px 4px rgba(0,0,0,0.05);
+    --shadow-md: 0 4px 6px rgba(0,0,0,0.1);
+    --shadow-lg: 0 10px 15px rgba(0,0,0,0.1);
+    --transition: all 0.2s ease-in-out;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Outfit', sans-serif;
+    /* Sang et or diagonal stripes (Senyera style) */
+    background: repeating-linear-gradient(
+        45deg,
+        var(--sang-et-or-yellow),
+        var(--sang-et-or-yellow) 40px,
+        var(--sang-et-or-red) 40px,
+        var(--sang-et-or-red) 80px
+    );
+    color: var(--text-primary);
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    padding: 20px;
+}
+
+.app-container {
+    width: 100%;
+    max-width: 600px;
+    background: rgba(255, 255, 255, 0.98);
+    backdrop-filter: blur(20px);
+    border-radius: 20px;
+    padding: 30px;
+    box-shadow: 0 15px 35px rgba(218, 18, 26, 0.3);
+    border: 3px solid var(--sang-et-or-red);
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+/* Header */
+header {
+    text-align: center;
+    margin-bottom: 10px;
+}
+
+.logo {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    font-size: 2rem;
+}
+
+.icon-sun {
+    color: var(--sang-et-or-yellow);
+    filter: drop-shadow(0 0 5px rgba(255,215,0,0.5));
+}
+
+h1 {
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.accent {
+    color: var(--sang-et-or-red);
+}
+
+.subtitle {
+    color: var(--text-secondary);
+    font-size: 1rem;
+    margin-top: 5px;
+}
+
+/* Controls */
+.game-controls {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+/* Board */
+.board-wrapper {
+    background: var(--board-bg);
+    padding: 10px;
+    border-radius: 10px;
+    box-shadow: var(--shadow-sm);
+    margin: 0 auto;
+    width: 100%;
+    max-width: 450px;
+    aspect-ratio: 1/1;
+}
+
+.sudoku-board {
+    display: grid;
+    grid-template-columns: repeat(9, 1fr);
+    grid-template-rows: repeat(9, 1fr);
+    width: 100%;
+    height: 100%;
+    border: 3px solid var(--board-border);
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.cell {
+    border: 1px solid var(--cell-border);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 1.5rem;
+    font-weight: 700;
+    cursor: pointer;
+    background: var(--board-bg);
+    transition: background-color 0.1s;
+    user-select: none;
+}
+
+/* Grid borders for 3x3 blocks */
+.cell:nth-child(3n) { border-right: 3px solid var(--board-border); }
+.cell:nth-child(n+19):nth-child(-n+27),
+.cell:nth-child(n+46):nth-child(-n+54) { border-bottom: 3px solid var(--board-border); }
+.cell:nth-child(9n) { border-right: none; }
+.cell:nth-last-child(-n+9) { border-bottom: none; }
+
+/* Cell States */
+.cell:hover { background: var(--cell-bg-hover); }
+.cell.selected { background: var(--cell-bg-selected); }
+.cell.given { 
+    background: var(--cell-bg-given);
+    cursor: default;
+}
+.cell.error { background: var(--cell-error) !important; animation: shake 0.4s; }
+
+/* Palette */
+.palette-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.palette-instruction {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+}
+
+.letter-palette {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.palette-btn {
+    width: 40px;
+    height: 40px;
+    border-radius: 8px;
+    border: 2px solid transparent;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 1.2rem;
+    font-weight: 700;
+    cursor: pointer;
+    background: white;
+    box-shadow: var(--shadow-sm);
+    transition: var(--transition);
+}
+
+.palette-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+}
+
+.palette-btn.active {
+    border-color: var(--text-primary);
+    transform: scale(1.1);
+    box-shadow: var(--shadow-md);
+}
+
+.palette-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+/* Actions */
+.action-buttons {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-top: 10px;
+}
+
+/* Typography Colors for the 9 distinct characters */
+.c1 { color: var(--color-1); }
+.c2 { color: var(--color-2); }
+.c3 { color: var(--color-3); }
+.c4 { color: var(--color-4); }
+.c5 { color: var(--color-5); }
+.c6 { color: var(--color-6); }
+.c7 { color: var(--color-7); }
+.c8 { color: var(--color-8); }
+.c9 { color: var(--color-9); }
+
+/* Given cells have a slightly muted color or stay vivid but distinct */
+.cell.given { opacity: 0.9; }
+
+/* Buttons */
+.btn {
+    padding: 10px 16px;
+    border-radius: 8px;
+    border: none;
+    font-family: inherit;
+    font-weight: 600;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: var(--transition);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.btn:active { transform: scale(0.95); }
+.btn.primary { background: var(--sang-et-or-red); color: var(--sang-et-or-yellow); border: 2px solid var(--sang-et-or-red); }
+.btn.primary:hover { background: #b70f14; color: white; }
+.btn.secondary { background: var(--sang-et-or-yellow); color: var(--sang-et-or-red); border: 2px solid var(--sang-et-or-red); }
+.btn.secondary:hover { background: #f0c300; }
+.btn.success { background: #43a047; color: white; border: 2px solid #2e7d32; }
+.btn.success:hover { background: #2e7d32; }
+.btn.outline { background: transparent; border: 2px solid var(--sang-et-or-red); color: var(--sang-et-or-red); }
+.btn.outline:hover { background: var(--sang-et-or-red); color: var(--sang-et-or-yellow); }
+
+/* Select */
+select {
+    padding: 10px 15px;
+    border-radius: 8px;
+    border: 1px solid var(--cell-border);
+    font-family: inherit;
+    font-size: 0.9rem;
+    background: white;
+    cursor: pointer;
+    outline: none;
+}
+
+/* Footer */
+footer {
+    text-align: center;
+    color: var(--text-secondary);
+    font-size: 0.8rem;
+    margin-top: 10px;
+}
+
+/* Modals */
+.hidden { display: none !important; }
+.modal {
+    position: fixed;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 100;
+    backdrop-filter: blur(5px);
+}
+.modal-content {
+    background: white;
+    padding: 40px;
+    border-radius: 16px;
+    text-align: center;
+    box-shadow: var(--shadow-lg);
+    animation: popIn 0.3s ease-out;
+}
+.modal-content h2 { margin-bottom: 10px; color: var(--sang-et-or-red); }
+.modal-content p { margin-bottom: 20px; font-size: 1.1rem; }
+
+/* Animations */
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-5px); }
+    75% { transform: translateX(5px); }
+}
+
+@keyframes popIn {
+    from { opacity: 0; transform: scale(0.9); }
+    to { opacity: 1; transform: scale(1); }
+}
+
+/* Mobile Responsiveness */
+@media (max-width: 480px) {
+    .app-container { padding: 15px; border-radius: 0; min-height: 100vh; }
+    header h1 { font-size: 1.6rem; }
+    .cell { font-size: 1.2rem; }
+    .palette-btn { width: 35px; height: 35px; }
+    .btn { padding: 8px 12px; font-size: 0.85rem; }
+    .action-buttons { flex-direction: column; width: 100%; }
+    .action-buttons .btn { width: 100%; justify-content: center; }
+}

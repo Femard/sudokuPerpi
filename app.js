@@ -34,6 +34,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const btnErase = document.getElementById('btn-erase');
     const btnExportPng = document.getElementById('btn-export-png');
     const btnExportPdf = document.getElementById('btn-export-pdf');
+    const btnExportBatch = document.getElementById('btn-export-batch');
     const modal = document.getElementById('victory-modal');
     const btnCloseModal = document.getElementById('btn-close-modal');
 
@@ -55,6 +56,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Exports
     btnExportPng.addEventListener('click', exportToPng);
     btnExportPdf.addEventListener('click', exportToPdf);
+    btnExportBatch.addEventListener('click', exportBatchToPdf);
 
     // Keyboard support
     document.addEventListener('keydown', handleKeyboard);
@@ -300,6 +302,126 @@ document.addEventListener('DOMContentLoaded', () => {
         } finally {
             btnExportPdf.disabled = false;
             btnExportPdf.innerHTML = '<i class="fa-solid fa-file-pdf"></i> Exporter PDF';
+        }
+    }
+
+    async function exportBatchToPdf() {
+        btnExportBatch.disabled = true;
+        btnExportBatch.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Exportation...';
+        
+        // Wait a small tick so the UI updates
+        await new Promise(r => setTimeout(r, 50));
+        
+        try {
+            const { jsPDF } = window.jspdf;
+            const pdf = new jsPDF('p', 'mm', 'a4');
+            const batches = [
+                { diff: 'easy', count: 35, label: 'Facile' },
+                { diff: 'medium', count: 25, label: 'Moyen' },
+                { diff: 'hard', count: 20, label: 'Difficile' }
+            ];
+
+            const generatedPuzzles = [];
+            const seen = new Set();
+            
+            batches.forEach(b => {
+                let count = 0;
+                while(count < b.count) {
+                    const generated = generator.generatePuzzle(b.diff);
+                    const serialized = JSON.stringify(generated.puzzleData);
+                    if (!seen.has(serialized)) {
+                        seen.add(serialized);
+                        generatedPuzzles.push({ puzzle: generated.puzzleData, difficulty: b.label });
+                        count++;
+                    }
+                }
+            });
+
+            const pdfColorMapping = {
+                1: [229, 57, 53],
+                2: [245, 124, 0],
+                3: [251, 192, 45],
+                4: [67, 160, 71],
+                5: [0, 172, 193],
+                6: [30, 136, 229],
+                7: [57, 73, 171],
+                8: [142, 36, 170],
+                9: [216, 27, 96]
+            };
+
+            for(let i=0; i < generatedPuzzles.length; i++) {
+                if (i > 0 && i % 2 === 0) {
+                    pdf.addPage();
+                }
+
+                const puzzleObj = generatedPuzzles[i];
+                const board = puzzleObj.puzzle;
+                const isTop = (i % 2 === 0);
+                
+                const startY = isTop ? 30 : 160;
+                const startX = 40;
+                const cellSize = 14.5;
+                const boardSize = cellSize * 9;
+                
+                // Add title
+                pdf.setFont("helvetica", "bold");
+                pdf.setFontSize(16);
+                pdf.setTextColor(218, 18, 26);
+                pdf.text(`Perpignan Sudoku - ${puzzleObj.difficulty} #${i + 1}`, 105, startY - 10, { align: "center" });
+                
+                // Draw grid
+                for(let r = 0; r <= 9; r++) {
+                    const y = startY + r * cellSize;
+                    if (r % 3 === 0) {
+                        pdf.setLineWidth(1.0);
+                        pdf.setDrawColor(218, 18, 26);
+                    } else {
+                        pdf.setLineWidth(0.3);
+                        pdf.setDrawColor(200, 200, 200);
+                    }
+                    pdf.line(startX, y, startX + boardSize, y);
+                }
+                
+                for(let c = 0; c <= 9; c++) {
+                    const x = startX + c * cellSize;
+                    if (c % 3 === 0) {
+                        pdf.setLineWidth(1.0);
+                        pdf.setDrawColor(218, 18, 26);
+                    } else {
+                        pdf.setLineWidth(0.3);
+                        pdf.setDrawColor(200, 200, 200);
+                    }
+                    pdf.line(x, startY, x, startY + boardSize);
+                }
+                
+                // Fill numbers
+                pdf.setFont("helvetica", "bold");
+                pdf.setFontSize(16);
+                
+                for(let r = 0; r < 9; r++) {
+                    for(let c = 0; c < 9; c++) {
+                        const val = board[r][c];
+                        if (val !== 0) {
+                            const rgb = pdfColorMapping[val];
+                            pdf.setTextColor(rgb[0], rgb[1], rgb[2]);
+                            
+                            const char = MAPPING[val].char;
+                            const textX = startX + c * cellSize + (cellSize / 2);
+                            const textY = startY + r * cellSize + (cellSize / 2) + 5.5; 
+                            pdf.text(char, textX, textY, { align: "center", baseline: "middle" });
+                        }
+                    }
+                }
+            }
+
+            pdf.save(`Sudoku_Perpignan_Lot_80.pdf`);
+
+        } catch (error) {
+            console.error("Erreur batch export", error);
+            alert("Erreur lors de l'exportation du lot.");
+        } finally {
+            btnExportBatch.disabled = false;
+            btnExportBatch.innerHTML = '<i class="fa-solid fa-layer-group"></i> Exporter Lot (80)';
         }
     }
 });

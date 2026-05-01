@@ -12,9 +12,9 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const PDF_COLORS = {
-        1: [229, 57, 53],   2: [245, 124, 0],  3: [251, 192, 45],
-        4: [67, 160, 71],   5: [0, 172, 193],  6: [30, 136, 229],
-        7: [57, 73, 171],   8: [142, 36, 170],  9: [216, 27, 96]
+        1: [229, 57, 53], 2: [245, 124, 0], 3: [251, 192, 45],
+        4: [67, 160, 71], 5: [0, 172, 193], 6: [30, 136, 229],
+        7: [57, 73, 171], 8: [142, 36, 170], 9: [216, 27, 96]
     };
 
     const CANVAS_COLORS = {
@@ -96,11 +96,16 @@ document.addEventListener('DOMContentLoaded', () => {
             btn.dataset.val = i;
             btn.textContent = MAPPING[i].char;
             btn.addEventListener('click', () => {
-                document.querySelectorAll('.palette-btn').forEach(b => b.classList.remove('active'));
-                btn.classList.add('active');
-                selectedNumber = i;
-                if (selectedCell && !selectedCell.classList.contains('given')) {
-                    updateCell(selectedCell, selectedNumber);
+                if (btn.classList.contains('active')) {
+                    btn.classList.remove('active');
+                    selectedNumber = null;
+                } else {
+                    document.querySelectorAll('.palette-btn').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    selectedNumber = i;
+                    if (selectedCell && !selectedCell.classList.contains('given')) {
+                        updateCell(selectedCell, selectedNumber);
+                    }
                 }
             });
             paletteEl.appendChild(btn);
@@ -189,7 +194,8 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!selectedCell || selectedCell.classList.contains('given')) return;
         if (e.key >= '1' && e.key <= '9') {
             updateCell(selectedCell, parseInt(e.key));
-        } else if (e.key === 'Backspace' || e.key === 'Delete') {
+        } else if (e.key === 'Backspace' || e.key === 'Delete' || e.key === '0' || e.key === ' ') {
+            if (e.key === ' ') e.preventDefault();
             updateCell(selectedCell, 0);
         }
     }
@@ -218,28 +224,40 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     async function exportToPdf() {
-        const captureArea = document.getElementById('capture-area');
         btnExportPdf.disabled = true;
         btnExportPdf.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Exportation...';
         try {
-            if (selectedCell) selectedCell.classList.remove('selected');
-            const canvas = await html2canvas(captureArea, { scale: 2, backgroundColor: '#ffffff' });
-            const imgData = canvas.toDataURL('image/png');
+            await new Promise(r => setTimeout(r, 50)); // Tiny delay for UI
             const { jsPDF } = window.jspdf;
             const pdf = new jsPDF('p', 'mm', 'a4');
+            
+            // Titre
             pdf.setFont('helvetica', 'bold');
             pdf.setFontSize(24);
-            pdf.setTextColor(210, 27, 27);
-            pdf.text('Sudoku Perpignan', 105, 20, { align: 'center' });
-            const imgProps = pdf.getImageProperties(imgData);
-            const pdfWidth = 150;
-            const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
-            pdf.addImage(imgData, 'PNG', (210 - pdfWidth) / 2, 40, pdfWidth, pdfHeight);
+            pdf.setTextColor(218, 18, 26);
+            pdf.text('Sudoku Perpignan', 105, 30, { align: 'center' });
+            
+            // Sous-titre difficulté
+            const diffSelect = document.getElementById('difficulty');
+            const diffText = diffSelect.options[diffSelect.selectedIndex].text;
+            pdf.setFontSize(14);
+            pdf.setTextColor(100, 100, 100);
+            pdf.text(`Niveau : ${diffText}`, 105, 40, { align: 'center' });
+
+            // Dessin de la grille en vectoriel
+            const CELL = 16;
+            const BOARD = CELL * 9;
+            const LEFT = (210 - BOARD) / 2;
+            const TOP = 55;
+            
+            drawGridOnPdf(pdf, userBoard, LEFT, TOP, CELL, false);
+            
+            // Pied de page
             pdf.setFontSize(10);
             pdf.setTextColor(100, 100, 100);
-            pdf.text(`Généré le: ${new Date().toLocaleDateString('fr-FR')}`, 105, 40 + pdfHeight + 10, { align: 'center' });
+            pdf.text(`Généré le: ${new Date().toLocaleDateString('fr-FR')}`, 105, TOP + BOARD + 15, { align: 'center' });
+            
             pdf.save(`Sudoku_Perpignan_${Date.now()}.pdf`);
-            if (selectedCell) selectedCell.classList.add('selected');
         } catch (err) {
             console.error(err);
             alert("Erreur lors de l'exportation PDF.");
@@ -262,9 +280,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const puzzles = [];
         const seen = new Set();
         const specs = [
-            { diff: 'easy',   label: 'Facile',    count: config.easy },
-            { diff: 'medium', label: 'Moyen',     count: config.medium },
-            { diff: 'hard',   label: 'Difficile', count: config.hard }
+            { diff: 'easy', label: 'Facile', count: config.easy },
+            { diff: 'medium', label: 'Moyen', count: config.medium },
+            { diff: 'hard', label: 'Difficile', count: config.hard }
         ];
         const total = config.easy + config.medium + config.hard;
         let done = 0;
@@ -358,16 +376,16 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function getBatchConfig() {
-        const easy   = Math.min(100, Math.max(0, parseInt(batchEasyInput.value)   || 0));
+        const easy = Math.min(100, Math.max(0, parseInt(batchEasyInput.value) || 0));
         const medium = Math.min(100, Math.max(0, parseInt(batchMediumInput.value) || 0));
-        const hard   = Math.min(100, Math.max(0, parseInt(batchHardInput.value)   || 0));
+        const hard = Math.min(100, Math.max(0, parseInt(batchHardInput.value) || 0));
         return { easy, medium, hard, total: easy + medium + hard };
     }
 
     async function exportBatchPdf() {
         const cfg = getBatchConfig();
         if (cfg.total === 0) { alert('Veuillez saisir au moins 1 grille.'); return; }
-        if (cfg.total > 100) { alert('Maximum 100 grilles par lot.'); return; }
+        if (cfg.total > 500) { alert('Maximum 500 grilles par lot.'); return; }
 
         setBatchBusy(true);
 
@@ -503,7 +521,7 @@ document.addEventListener('DOMContentLoaded', () => {
     async function exportBatchZip() {
         const cfg = getBatchConfig();
         if (cfg.total === 0) { alert('Veuillez saisir au moins 1 grille.'); return; }
-        if (cfg.total > 100) { alert('Maximum 100 grilles par lot.'); return; }
+        if (cfg.total > 500) { alert('Maximum 500 grilles par lot.'); return; }
 
         setBatchBusy(true);
 

@@ -338,7 +338,8 @@ document.addEventListener('DOMContentLoaded', () => {
             pdf.line(startX + i * cellSize, startY, startX + i * cellSize, startY + boardSize);
         }
         pdf.setFont('helvetica', 'bold');
-        pdf.setFontSize(isAnswer ? 13 : 16);
+        pdf.setFontSize(cellSize * 1.15); // Responsive font size
+        const textOffsetY = cellSize * 0.32; // Responsive vertical centering
         for (let r = 0; r < 9; r++) {
             for (let c = 0; c < 9; c++) {
                 const val = board[r][c];
@@ -348,7 +349,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     pdf.text(
                         MAPPING[val].char,
                         startX + c * cellSize + cellSize / 2,
-                        startY + r * cellSize + cellSize / 2 + (isAnswer ? 4.5 : 5.5),
+                        startY + r * cellSize + cellSize / 2 + textOffsetY,
                         { align: 'center' }
                     );
                 }
@@ -399,13 +400,50 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const { jsPDF } = window.jspdf;
             const pdf = new jsPDF('p', 'mm', 'a4');
+            const date = new Date().toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' });
+            
+            let pageNum = 1;
+            const addFooter = () => {
+                pdf.setFontSize(10);
+                pdf.setTextColor(150, 150, 150);
+                pdf.setFont('helvetica', 'normal');
+                pdf.text(`Sudoku Perpignan — Page ${pageNum}`, 105, 290, { align: 'center' });
+                pageNum++;
+            };
+
+            // — Cover Page —
+            pdf.setFont('helvetica', 'bold');
+            pdf.setFontSize(40);
+            pdf.setTextColor(218, 18, 26);
+            pdf.text('Sudoku Perpignan', 105, 80, { align: 'center' });
+            
+            pdf.setFontSize(20);
+            pdf.setTextColor(245, 124, 0);
+            pdf.text('Livre de Puzzles', 105, 100, { align: 'center' });
+
+            pdf.setFontSize(14);
+            pdf.setTextColor(80, 80, 80);
+            pdf.setFont('helvetica', 'normal');
+            pdf.text(`Généré le ${date}`, 105, 130, { align: 'center' });
+            
+            pdf.text(`${puzzles.length} grilles au total :`, 105, 150, { align: 'center' });
+            pdf.setFont('helvetica', 'bold');
+            let yOffset = 165;
+            if (cfg.easy > 0) { pdf.text(`• ${cfg.easy} Facile`, 105, yOffset, { align: 'center' }); yOffset += 10; }
+            if (cfg.medium > 0) { pdf.text(`• ${cfg.medium} Moyen`, 105, yOffset, { align: 'center' }); yOffset += 10; }
+            if (cfg.hard > 0) { pdf.text(`• ${cfg.hard} Difficile`, 105, yOffset, { align: 'center' }); }
+            addFooter();
+
+            // — Puzzle pages (2 per page) —
             const CELL = 14.5;
             const BOARD = CELL * 9;
             const LEFT = (210 - BOARD) / 2;
 
-            // — Puzzle pages —
             for (let i = 0; i < puzzles.length; i++) {
-                if (i > 0 && i % 2 === 0) pdf.addPage();
+                if (i % 2 === 0) {
+                    pdf.addPage();
+                    addFooter();
+                }
                 const startY = i % 2 === 0 ? 30 : 162;
                 pdf.setFont('helvetica', 'bold');
                 pdf.setFontSize(13);
@@ -414,21 +452,41 @@ document.addEventListener('DOMContentLoaded', () => {
                 drawGridOnPdf(pdf, puzzles[i].puzzle, LEFT, startY, CELL, false);
             }
 
-            // — Answer pages (booklet: all answers at the end) —
-            pdf.addPage();
-            for (let i = 0; i < puzzles.length; i++) {
-                if (i > 0 && i % 2 === 0) pdf.addPage();
-                const startY = i % 2 === 0 ? 30 : 162;
+            // — Divider page for Solutions —
+            if (puzzles.length > 0) {
+                pdf.addPage();
+                addFooter();
                 pdf.setFont('helvetica', 'bold');
-                pdf.setFontSize(13);
+                pdf.setFontSize(40);
                 pdf.setTextColor(43, 130, 65);
-                pdf.text(`Solution #${i + 1} — ${puzzles[i].difficulty}`, 105, startY - 9, { align: 'center' });
-                drawGridOnPdf(pdf, puzzles[i].solved, LEFT, startY, CELL, true);
+                pdf.text('Solutions', 105, 140, { align: 'center' });
+            }
+
+            // — Answer pages (4 per page to save paper) —
+            const SOL_CELL = 9.5;
+            const SOL_BOARD = SOL_CELL * 9;
+
+            for (let i = 0; i < puzzles.length; i++) {
+                if (i % 4 === 0) {
+                    pdf.addPage();
+                    addFooter();
+                }
+                const col = i % 2;
+                const row = Math.floor((i % 4) / 2);
+                
+                const startX = col === 0 ? 15 : 210 - 15 - SOL_BOARD;
+                const startY = row === 0 ? 40 : 170;
+                
+                pdf.setFont('helvetica', 'bold');
+                pdf.setFontSize(11);
+                pdf.setTextColor(43, 130, 65);
+                pdf.text(`Solution #${i + 1} — ${puzzles[i].difficulty}`, startX + SOL_BOARD / 2, startY - 6, { align: 'center' });
+                drawGridOnPdf(pdf, puzzles[i].solved, startX, startY, SOL_CELL, true);
             }
 
             // — Quality certificate on last page —
             pdf.addPage();
-            const date = new Date().toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' });
+            addFooter();
             pdf.setFont('helvetica', 'bold');
             pdf.setFontSize(18);
             pdf.setTextColor(218, 18, 26);

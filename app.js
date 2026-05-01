@@ -407,7 +407,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 pdf.setFontSize(10);
                 pdf.setTextColor(150, 150, 150);
                 pdf.setFont('helvetica', 'normal');
-                pdf.text(`Sudoku Perpignan — Page ${pageNum}`, 105, 290, { align: 'center' });
+                pdf.text(`Sudoku Perpignan - Page ${pageNum}`, 105, 290, { align: 'center' });
                 pageNum++;
             };
 
@@ -429,9 +429,9 @@ document.addEventListener('DOMContentLoaded', () => {
             pdf.text(`${puzzles.length} grilles au total :`, 105, 150, { align: 'center' });
             pdf.setFont('helvetica', 'bold');
             let yOffset = 165;
-            if (cfg.easy > 0) { pdf.text(`• ${cfg.easy} Facile`, 105, yOffset, { align: 'center' }); yOffset += 10; }
-            if (cfg.medium > 0) { pdf.text(`• ${cfg.medium} Moyen`, 105, yOffset, { align: 'center' }); yOffset += 10; }
-            if (cfg.hard > 0) { pdf.text(`• ${cfg.hard} Difficile`, 105, yOffset, { align: 'center' }); }
+            if (cfg.easy > 0) { pdf.text(`- ${cfg.easy} Facile`, 105, yOffset, { align: 'center' }); yOffset += 10; }
+            if (cfg.medium > 0) { pdf.text(`- ${cfg.medium} Moyen`, 105, yOffset, { align: 'center' }); yOffset += 10; }
+            if (cfg.hard > 0) { pdf.text(`- ${cfg.hard} Difficile`, 105, yOffset, { align: 'center' }); }
             addFooter();
 
             // — Puzzle pages (2 per page) —
@@ -448,7 +448,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 pdf.setFont('helvetica', 'bold');
                 pdf.setFontSize(14);
                 pdf.setTextColor(218, 18, 26);
-                pdf.text(`#${i + 1} — ${puzzles[i].difficulty}`, 105, startY - 7, { align: 'center' });
+                pdf.text(`#${i + 1} - ${puzzles[i].difficulty}`, 105, startY - 7, { align: 'center' });
                 drawGridOnPdf(pdf, puzzles[i].puzzle, LEFT, startY, CELL, false);
             }
 
@@ -480,7 +480,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 pdf.setFont('helvetica', 'bold');
                 pdf.setFontSize(11);
                 pdf.setTextColor(43, 130, 65);
-                pdf.text(`Solution #${i + 1} — ${puzzles[i].difficulty}`, startX + SOL_BOARD / 2, startY - 5, { align: 'center' });
+                pdf.text(`Solution #${i + 1} - ${puzzles[i].difficulty}`, startX + SOL_BOARD / 2, startY - 5, { align: 'center' });
                 drawGridOnPdf(pdf, puzzles[i].solved, startX, startY, SOL_CELL, true);
             }
 
@@ -496,14 +496,14 @@ document.addEventListener('DOMContentLoaded', () => {
             pdf.setTextColor(40, 40, 40);
             const lines = [
                 `Lot généré le ${date}`,
-                `${puzzles.length} grilles — ${cfg.easy} Facile · ${cfg.medium} Moyen · ${cfg.hard} Difficile`,
+                `${puzzles.length} grilles - ${cfg.easy} Facile - ${cfg.medium} Moyen - ${cfg.hard} Difficile`,
                 '',
-                '✓  Chaque grille possède exactement une solution unique',
-                '✓  Grilles Facile : résolubles par singles nus uniquement',
-                '✓  Grilles Moyen : résolubles par singles nus + cachés',
-                '✓  Grilles Difficile : solution unique, techniques avancées requises',
-                '✓  Chaque solution vérifiée indépendamment (re-résolution complète)',
-                '✓  Aucune grille en double dans ce lot',
+                '-  Chaque grille possède exactement une solution unique',
+                '-  Grilles Facile : résolubles par singles nus uniquement',
+                '-  Grilles Moyen : résolubles par singles nus + cachés',
+                '-  Grilles Difficile : solution unique, techniques avancées requises',
+                '-  Chaque solution vérifiée indépendamment (re-résolution complète)',
+                '-  Aucune grille en double dans ce lot',
                 '',
                 'Généré par Sudoku Perpignan Generator'
             ];

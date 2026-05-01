@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="fr">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
@@ -8,6 +9,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="style.css">
 </head>
+
 <body>
     <div class="app-container">
         <header>
@@ -20,7 +22,8 @@
 
         <main>
             <div class="game-controls">
-                <button id="btn-new-game" class="btn primary"><i class="fa-solid fa-rotate-right"></i> Nouvelle Partie</button>
+                <button id="btn-new-game" class="btn primary"><i class="fa-solid fa-rotate-right"></i> Nouvelle
+                    Partie</button>
                 <div class="difficulty-selector">
                     <select id="difficulty">
                         <option value="easy">Facile</option>
@@ -38,15 +41,18 @@
                 <p class="palette-instruction">Sélectionnez une lettre puis cliquez sur une case :</p>
                 <div class="letter-palette" id="palette"></div>
                 <div class="palette-actions">
-                    <button id="btn-erase" class="btn outline erase-btn"><i class="fa-solid fa-eraser"></i> Effacer</button>
+                    <button id="btn-erase" class="btn outline erase-btn"><i class="fa-solid fa-eraser"></i>
+                        Effacer</button>
                     <button id="btn-hint" class="btn outline"><i class="fa-solid fa-lightbulb"></i> Indice</button>
                 </div>
             </div>
 
             <div class="action-buttons">
                 <button id="btn-check" class="btn success"><i class="fa-solid fa-check"></i> Vérifier</button>
-                <button id="btn-export-png" class="btn secondary"><i class="fa-solid fa-image"></i> Exporter PNG</button>
-                <button id="btn-export-pdf" class="btn secondary"><i class="fa-solid fa-file-pdf"></i> Exporter PDF</button>
+                <button id="btn-export-png" class="btn secondary"><i class="fa-solid fa-image"></i> Exporter
+                    PNG</button>
+                <button id="btn-export-pdf" class="btn secondary"><i class="fa-solid fa-file-pdf"></i> Exporter
+                    PDF</button>
             </div>
 
             <!-- Batch export panel -->
@@ -68,7 +74,8 @@
                         <input type="number" id="batch-hard" class="batch-input" min="0" max="100" value="5">
                         <span class="batch-unit">grilles</span>
                     </div>
-                    <p class="batch-total">Total : <strong><span id="batch-total-count">15</span> grilles</strong> <span class="batch-max">(max 100)</span></p>
+                    <p class="batch-total">Total : <strong><span id="batch-total-count">15</span> grilles</strong> <span
+                            class="batch-max">(max 500)</span></p>
                 </div>
 
                 <div class="progress-container hidden" id="progress-container">
@@ -112,4 +119,5 @@
     <script src="sudoku.js"></script>
     <script src="app.js"></script>
 </body>
+
 </html>

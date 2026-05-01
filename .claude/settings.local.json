@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__mcp-obsidian__obsidian_append_content",
+      "mcp__mcp-obsidian__obsidian_patch_content"
+    ]
+  }
+}

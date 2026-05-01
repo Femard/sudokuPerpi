@@ -377,9 +377,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function getBatchConfig() {
-        const easy = Math.min(100, Math.max(0, parseInt(batchEasyInput.value) || 0));
-        const medium = Math.min(100, Math.max(0, parseInt(batchMediumInput.value) || 0));
-        const hard = Math.min(100, Math.max(0, parseInt(batchHardInput.value) || 0));
+        const easy = Math.min(500, Math.max(0, parseInt(batchEasyInput.value) || 0));
+        const medium = Math.min(500, Math.max(0, parseInt(batchMediumInput.value) || 0));
+        const hard = Math.min(500, Math.max(0, parseInt(batchHardInput.value) || 0));
         return { easy, medium, hard, total: easy + medium + hard };
     }
 

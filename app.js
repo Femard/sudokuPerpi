@@ -435,8 +435,8 @@ document.addEventListener('DOMContentLoaded', () => {
             addFooter();
 
             // — Puzzle pages (2 per page) —
-            const CELL = 14.5;
-            const BOARD = CELL * 9;
+            const CELL = 12.5; // Reduced from 14.5 to fit 2 perfectly on A4
+            const BOARD = CELL * 9; // 112.5 mm
             const LEFT = (210 - BOARD) / 2;
 
             for (let i = 0; i < puzzles.length; i++) {
@@ -444,11 +444,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     pdf.addPage();
                     addFooter();
                 }
-                const startY = i % 2 === 0 ? 30 : 162;
+                const startY = i % 2 === 0 ? 30 : 165; // Grid 1 at 30 (ends 142.5), Grid 2 at 165
                 pdf.setFont('helvetica', 'bold');
-                pdf.setFontSize(13);
+                pdf.setFontSize(14);
                 pdf.setTextColor(218, 18, 26);
-                pdf.text(`#${i + 1} — ${puzzles[i].difficulty}`, 105, startY - 9, { align: 'center' });
+                pdf.text(`#${i + 1} — ${puzzles[i].difficulty}`, 105, startY - 7, { align: 'center' });
                 drawGridOnPdf(pdf, puzzles[i].puzzle, LEFT, startY, CELL, false);
             }
 
@@ -475,12 +475,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 const row = Math.floor((i % 4) / 2);
                 
                 const startX = col === 0 ? 15 : 210 - 15 - SOL_BOARD;
-                const startY = row === 0 ? 40 : 170;
+                const startY = row === 0 ? 35 : 160;
                 
                 pdf.setFont('helvetica', 'bold');
                 pdf.setFontSize(11);
                 pdf.setTextColor(43, 130, 65);
-                pdf.text(`Solution #${i + 1} — ${puzzles[i].difficulty}`, startX + SOL_BOARD / 2, startY - 6, { align: 'center' });
+                pdf.text(`Solution #${i + 1} — ${puzzles[i].difficulty}`, startX + SOL_BOARD / 2, startY - 5, { align: 'center' });
                 drawGridOnPdf(pdf, puzzles[i].solved, startX, startY, SOL_CELL, true);
             }
 

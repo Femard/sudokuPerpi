@@ -1,14 +1,14 @@
 document.addEventListener('DOMContentLoaded', () => {
     const MAPPING = {
-        1: { char: 'P', colorClass: 'c1' },
-        2: { char: 'E', colorClass: 'c2' },
-        3: { char: 'R', colorClass: 'c3' },
-        4: { char: 'P', colorClass: 'c4' },
-        5: { char: 'I', colorClass: 'c5' },
-        6: { char: 'G', colorClass: 'c6' },
-        7: { char: 'N', colorClass: 'c7' },
-        8: { char: 'A', colorClass: 'c8' },
-        9: { char: 'N', colorClass: 'c9' }
+        1: { char: 'P', colorClass: 'c1', colorName: 'rouge' },
+        2: { char: 'E', colorClass: 'c2', colorName: 'orange' },
+        3: { char: 'R', colorClass: 'c3', colorName: 'jaune' },
+        4: { char: 'P', colorClass: 'c4', colorName: 'vert' },
+        5: { char: 'I', colorClass: 'c5', colorName: 'turquoise' },
+        6: { char: 'G', colorClass: 'c6', colorName: 'bleu' },
+        7: { char: 'N', colorClass: 'c7', colorName: 'indigo' },
+        8: { char: 'A', colorClass: 'c8', colorName: 'violet' },
+        9: { char: 'N', colorClass: 'c9', colorName: 'rose' }
     };
 
     const PDF_COLORS = {
@@ -29,9 +29,14 @@ document.addEventListener('DOMContentLoaded', () => {
     let userBoard = null;
     let selectedCell = null;
     let selectedNumber = null;
+    let tabStopCell = null; // the one cell reachable with Tab (roving tabindex)
+    let won = false;
+    let victoryTimer = null;
+    let modalOpener = null;
 
     // DOM — game
     const boardEl = document.getElementById('board');
+    const statusEl = document.getElementById('status');
     const paletteEl = document.getElementById('palette');
     const btnNewGame = document.getElementById('btn-new-game');
     const difficultySelect = document.getElementById('difficulty');
@@ -64,7 +69,7 @@ document.addEventListener('DOMContentLoaded', () => {
     btnErase.addEventListener('click', () => {
         if (selectedCell && !selectedCell.classList.contains('given')) updateCell(selectedCell, 0);
     });
-    btnCloseModal.addEventListener('click', () => modal.classList.add('hidden'));
+    btnCloseModal.addEventListener('click', closeVictoryModal);
     btnExportPng.addEventListener('click', exportToPng);
     btnExportPdf.addEventListener('click', exportToPdf);
     document.addEventListener('keydown', handleKeyboard);
@@ -85,23 +90,39 @@ document.addEventListener('DOMContentLoaded', () => {
         currentPuzzle = JSON.parse(JSON.stringify(generated.puzzleData));
         userBoard = JSON.parse(JSON.stringify(generated.puzzleData));
         selectedCell = null;
+        won = false;
+        clearTimeout(victoryTimer);
+        modal.classList.add('hidden');
+        setStatus('');
         renderBoard();
+    }
+
+    function setStatus(message) {
+        statusEl.textContent = message;
     }
 
     function initPalette() {
         paletteEl.innerHTML = '';
         for (let i = 1; i <= 9; i++) {
-            const btn = document.createElement('div');
+            const btn = document.createElement('button');
+            btn.type = 'button';
             btn.className = `palette-btn ${MAPPING[i].colorClass}`;
             btn.dataset.val = i;
             btn.textContent = MAPPING[i].char;
+            btn.setAttribute('aria-label', `Lettre ${MAPPING[i].char} ${MAPPING[i].colorName}`);
+            btn.setAttribute('aria-pressed', 'false');
             btn.addEventListener('click', () => {
                 if (btn.classList.contains('active')) {
                     btn.classList.remove('active');
+                    btn.setAttribute('aria-pressed', 'false');
                     selectedNumber = null;
                 } else {
-                    document.querySelectorAll('.palette-btn').forEach(b => b.classList.remove('active'));
+                    document.querySelectorAll('.palette-btn').forEach(b => {
+                        b.classList.remove('active');
+                        b.setAttribute('aria-pressed', 'false');
+                    });
                     btn.classList.add('active');
+                    btn.setAttribute('aria-pressed', 'true');
                     selectedNumber = i;
                     if (selectedCell && !selectedCell.classList.contains('given')) {
                         updateCell(selectedCell, selectedNumber);
@@ -114,13 +135,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function renderBoard() {
         boardEl.innerHTML = '';
+        tabStopCell = null;
         for (let r = 0; r < 9; r++) {
             for (let c = 0; c < 9; c++) {
                 const val = userBoard[r][c];
-                const cell = document.createElement('div');
+                const cell = document.createElement('button');
+                cell.type = 'button';
                 cell.className = 'cell';
                 cell.dataset.r = r;
                 cell.dataset.c = c;
+                cell.tabIndex = -1;
                 if (currentPuzzle[r][c] !== 0) {
                     cell.classList.add('given');
                     cell.textContent = MAPPING[val].char;
@@ -129,18 +153,40 @@ document.addEventListener('DOMContentLoaded', () => {
                     cell.textContent = MAPPING[val].char;
                     cell.classList.add(MAPPING[val].colorClass);
                 }
+                updateCellLabel(cell);
                 cell.addEventListener('click', () => onCellClick(cell));
+                cell.addEventListener('focus', () => selectCell(cell));
                 boardEl.appendChild(cell);
             }
         }
+        tabStopCell = boardEl.firstElementChild;
+        tabStopCell.tabIndex = 0;
+    }
+
+    // Screen-reader description. The colour is part of it because two letters
+    // (P and N) each appear twice and are told apart by colour only.
+    function updateCellLabel(cell) {
+        const r = parseInt(cell.dataset.r);
+        const c = parseInt(cell.dataset.c);
+        const val = userBoard[r][c];
+        const content = val === 0 ? 'vide' : `lettre ${MAPPING[val].char} ${MAPPING[val].colorName}`;
+        const given = cell.classList.contains('given') ? ', case donnée' : '';
+        cell.setAttribute('aria-label', `Ligne ${r + 1}, colonne ${c + 1}, ${content}${given}`);
+    }
+
+    function selectCell(cell) {
+        boardEl.querySelectorAll('.cell.selected, .cell.error').forEach(c => {
+            c.classList.remove('selected', 'error');
+        });
+        if (tabStopCell) tabStopCell.tabIndex = -1;
+        cell.tabIndex = 0;
+        tabStopCell = cell;
+        selectedCell = cell;
+        cell.classList.add('selected');
     }
 
     function onCellClick(cell) {
-        document.querySelectorAll('.cell').forEach(c => {
-            c.classList.remove('selected', 'error');
-        });
-        selectedCell = cell;
-        cell.classList.add('selected');
+        selectCell(cell);
         if (selectedNumber !== null && !cell.classList.contains('given')) {
             updateCell(cell, selectedNumber);
         }
@@ -158,10 +204,12 @@ document.addEventListener('DOMContentLoaded', () => {
             cell.textContent = MAPPING[val].char;
             cell.classList.add(MAPPING[val].colorClass);
         }
+        updateCellLabel(cell);
         checkWinCondition();
     }
 
     function checkBoard() {
+        let errors = 0;
         boardEl.querySelectorAll('.cell').forEach(cell => {
             if (cell.classList.contains('given')) return;
             const r = parseInt(cell.dataset.r);
@@ -169,33 +217,76 @@ document.addEventListener('DOMContentLoaded', () => {
             const val = userBoard[r][c];
             cell.classList.remove('error');
             if (val !== 0 && val !== currentSolved[r][c]) {
+                errors++;
                 cell.classList.add('error');
                 setTimeout(() => cell.classList.remove('error'), 500);
             }
         });
+        setStatus(errors === 0
+            ? 'Aucune erreur détectée.'
+            : `${errors} case${errors > 1 ? 's' : ''} incorrecte${errors > 1 ? 's' : ''}.`);
     }
 
     function giveHint() {
-        if (!selectedCell || selectedCell.classList.contains('given')) return;
+        if (!selectedCell || selectedCell.classList.contains('given')) {
+            setStatus('Sélectionnez d’abord une case vide.');
+            return;
+        }
         const r = parseInt(selectedCell.dataset.r);
         const c = parseInt(selectedCell.dataset.c);
         if (userBoard[r][c] !== currentSolved[r][c]) updateCell(selectedCell, currentSolved[r][c]);
     }
 
     function checkWinCondition() {
+        if (won) return true;
         for (let r = 0; r < 9; r++)
             for (let c = 0; c < 9; c++)
                 if (userBoard[r][c] !== currentSolved[r][c]) return false;
-        setTimeout(() => modal.classList.remove('hidden'), 300);
+        won = true;
+        setStatus('Bravo, la grille est complète !');
+        victoryTimer = setTimeout(openVictoryModal, 300);
         return true;
     }
 
+    function openVictoryModal() {
+        modalOpener = document.activeElement;
+        modal.classList.remove('hidden');
+        btnCloseModal.focus();
+    }
+
+    function closeVictoryModal() {
+        modal.classList.add('hidden');
+        if (modalOpener && document.contains(modalOpener)) modalOpener.focus();
+        modalOpener = null;
+    }
+
+    function moveSelection(dr, dc) {
+        const r = Math.min(8, Math.max(0, parseInt(selectedCell.dataset.r) + dr));
+        const c = Math.min(8, Math.max(0, parseInt(selectedCell.dataset.c) + dc));
+        boardEl.children[r * 9 + c].focus(); // the focus handler selects it
+    }
+
+    const ARROWS = { ArrowUp: [-1, 0], ArrowDown: [1, 0], ArrowLeft: [0, -1], ArrowRight: [0, 1] };
+
     function handleKeyboard(e) {
-        if (!selectedCell || selectedCell.classList.contains('given')) return;
+        if (!modal.classList.contains('hidden')) {
+            if (e.key === 'Escape') closeVictoryModal();
+            else if (e.key === 'Tab') { e.preventDefault(); btnCloseModal.focus(); } // keep focus in the dialog
+            return;
+        }
+        if (!selectedCell) return;
+        if (ARROWS[e.key]) {
+            e.preventDefault();
+            moveSelection(...ARROWS[e.key]);
+            return;
+        }
+        if (selectedCell.classList.contains('given')) return;
         if (e.key >= '1' && e.key <= '9') {
             updateCell(selectedCell, parseInt(e.key));
-        } else if (e.key === 'Backspace' || e.key === 'Delete' || e.key === '0' || e.key === ' ') {
-            if (e.key === ' ') e.preventDefault();
+        } else if (e.key === 'Backspace' || e.key === 'Delete' || e.key === '0') {
+            updateCell(selectedCell, 0);
+        } else if (e.key === ' ' && e.target === selectedCell) {
+            e.preventDefault(); // erase instead of re-clicking the cell
             updateCell(selectedCell, 0);
         }
     }
@@ -213,11 +304,11 @@ document.addEventListener('DOMContentLoaded', () => {
             link.download = `Sudoku_Perpignan_${Date.now()}.png`;
             link.href = canvas.toDataURL('image/png');
             link.click();
-            if (selectedCell) selectedCell.classList.add('selected');
         } catch (err) {
             console.error(err);
             alert("Erreur lors de l'exportation PNG.");
         } finally {
+            if (selectedCell) selectedCell.classList.add('selected');
             btnExportPng.disabled = false;
             btnExportPng.innerHTML = '<i class="fa-solid fa-image"></i> Exporter PNG';
         }
@@ -250,7 +341,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const LEFT = (210 - BOARD) / 2;
             const TOP = 55;
             
-            drawGridOnPdf(pdf, userBoard, LEFT, TOP, CELL, false);
+            drawGridOnPdf(pdf, userBoard, LEFT, TOP, CELL);
             
             // Pied de page
             pdf.setFontSize(10);
@@ -289,12 +380,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
         for (const spec of specs) {
             let count = 0;
-            let dupStreak = 0;
+            let rejectStreak = 0; // consecutive duplicates / off-level puzzles
             while (count < spec.count) {
                 await new Promise(r => setTimeout(r, 0));
                 const result = generator.generatePuzzle(spec.diff);
                 const fp = generator.fingerprint(result.puzzleData);
-                if (!seen.has(fp)) {
+                if (result.levelMet && !seen.has(fp)) {
                     seen.add(fp);
                     puzzles.push({
                         puzzle: result.puzzleData,
@@ -304,9 +395,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     });
                     count++;
                     done++;
-                    dupStreak = 0;
+                    rejectStreak = 0;
                     onProgress(done, total);
-                } else if (++dupStreak > 200) {
+                } else if (++rejectStreak > 200) {
                     break;
                 }
             }
@@ -328,18 +419,32 @@ document.addEventListener('DOMContentLoaded', () => {
         return verified;
     }
 
-    function drawGridOnPdf(pdf, board, startX, startY, cellSize, isAnswer) {
-        const boardSize = cellSize * 9;
-        for (let i = 0; i <= 9; i++) {
-            const isBox = i % 3 === 0;
-            pdf.setLineWidth(isBox ? 1.0 : 0.3);
-            if (isBox) { pdf.setDrawColor(218, 18, 26); } else { pdf.setDrawColor(180, 180, 180); }
-            pdf.line(startX, startY + i * cellSize, startX + boardSize, startY + i * cellSize);
-            pdf.line(startX + i * cellSize, startY, startX + i * cellSize, startY + boardSize);
+    // Draw a sudoku grid. Thin grey inner lines are painted first so the thick red
+    // box borders (drawn second) are never obscured. baseline:'middle' centers each
+    // letter exactly in its cell — no manual offset needed.
+    function drawGridOnPdf(pdf, board, left, top, cellSize) {
+        const size = cellSize * 9;
+
+        // Pass 1 — thin grey inner lines (skip box boundaries)
+        pdf.setLineWidth(0.25);
+        pdf.setDrawColor(190, 190, 190);
+        for (let i = 1; i <= 8; i++) {
+            if (i % 3 === 0) continue;
+            pdf.line(left, top + i * cellSize, left + size, top + i * cellSize);
+            pdf.line(left + i * cellSize, top, left + i * cellSize, top + size);
         }
+
+        // Pass 2 — thick red box borders and outer frame on top
+        pdf.setLineWidth(1.1);
+        pdf.setDrawColor(218, 18, 26);
+        for (let i = 0; i <= 9; i += 3) {
+            pdf.line(left, top + i * cellSize, left + size, top + i * cellSize);
+            pdf.line(left + i * cellSize, top, left + i * cellSize, top + size);
+        }
+
+        // Letters — baseline:'middle' places the glyph center at (cx, cy) exactly
         pdf.setFont('helvetica', 'bold');
-        pdf.setFontSize(cellSize * 1.15); // Responsive font size
-        const textOffsetY = cellSize * 0.32; // Responsive vertical centering
+        pdf.setFontSize(cellSize * 1.15);
         for (let r = 0; r < 9; r++) {
             for (let c = 0; c < 9; c++) {
                 const val = board[r][c];
@@ -348,9 +453,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     pdf.setTextColor(rgb[0], rgb[1], rgb[2]);
                     pdf.text(
                         MAPPING[val].char,
-                        startX + c * cellSize + cellSize / 2,
-                        startY + r * cellSize + cellSize / 2 + textOffsetY,
-                        { align: 'center' }
+                        left + c * cellSize + cellSize / 2,
+                        top  + r * cellSize + cellSize / 2,
+                        { align: 'center', baseline: 'middle' }
                     );
                 }
             }
@@ -376,6 +481,20 @@ document.addEventListener('DOMContentLoaded', () => {
             : label;
     }
 
+    // What was actually generated (may be less than requested if the generator
+    // gave up on a level), so the PDF never advertises grids it doesn't contain.
+    function countByLevel(puzzles) {
+        const counts = { easy: 0, medium: 0, hard: 0 };
+        puzzles.forEach(p => counts[p.diffKey]++);
+        return counts;
+    }
+
+    function batchDoneLabel(generated, requested) {
+        return generated < requested
+            ? `⚠ ${generated}/${requested} grilles générées et exportées`
+            : `✓ ${generated} grilles vérifiées et exportées`;
+    }
+
     function getBatchConfig() {
         const easy = Math.min(500, Math.max(0, parseInt(batchEasyInput.value) || 0));
         const medium = Math.min(500, Math.max(0, parseInt(batchMediumInput.value) || 0));
@@ -394,6 +513,9 @@ document.addEventListener('DOMContentLoaded', () => {
             const puzzles = await generateBatchPuzzles(cfg, (done, total) =>
                 setProgress(done, total, 'Génération')
             );
+
+            if (puzzles.length === 0) { alert('Aucune grille n’a pu être générée.'); return; }
+            const counts = countByLevel(puzzles);
 
             setProgress(0, 1, 'Construction du PDF...');
             await new Promise(r => setTimeout(r, 0));
@@ -429,9 +551,9 @@ document.addEventListener('DOMContentLoaded', () => {
             pdf.text(`${puzzles.length} grilles au total :`, 105, 150, { align: 'center' });
             pdf.setFont('helvetica', 'bold');
             let yOffset = 165;
-            if (cfg.easy > 0) { pdf.text(`- ${cfg.easy} Facile`, 105, yOffset, { align: 'center' }); yOffset += 10; }
-            if (cfg.medium > 0) { pdf.text(`- ${cfg.medium} Moyen`, 105, yOffset, { align: 'center' }); yOffset += 10; }
-            if (cfg.hard > 0) { pdf.text(`- ${cfg.hard} Difficile`, 105, yOffset, { align: 'center' }); }
+            if (counts.easy > 0) { pdf.text(`- ${counts.easy} Facile`, 105, yOffset, { align: 'center' }); yOffset += 10; }
+            if (counts.medium > 0) { pdf.text(`- ${counts.medium} Moyen`, 105, yOffset, { align: 'center' }); yOffset += 10; }
+            if (counts.hard > 0) { pdf.text(`- ${counts.hard} Difficile`, 105, yOffset, { align: 'center' }); }
             addFooter();
 
             // — Puzzle pages (2 per page) —
@@ -449,7 +571,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 pdf.setFontSize(14);
                 pdf.setTextColor(218, 18, 26);
                 pdf.text(`#${i + 1} - ${puzzles[i].difficulty}`, 105, startY - 7, { align: 'center' });
-                drawGridOnPdf(pdf, puzzles[i].puzzle, LEFT, startY, CELL, false);
+                drawGridOnPdf(pdf, puzzles[i].puzzle, LEFT, startY, CELL);
             }
 
             // — Divider page for Solutions —
@@ -481,7 +603,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 pdf.setFontSize(11);
                 pdf.setTextColor(43, 130, 65);
                 pdf.text(`Solution #${i + 1} - ${puzzles[i].difficulty}`, startX + SOL_BOARD / 2, startY - 5, { align: 'center' });
-                drawGridOnPdf(pdf, puzzles[i].solved, startX, startY, SOL_CELL, true);
+                drawGridOnPdf(pdf, puzzles[i].solved, startX, startY, SOL_CELL);
             }
 
             // — Quality certificate on last page —
@@ -496,12 +618,12 @@ document.addEventListener('DOMContentLoaded', () => {
             pdf.setTextColor(40, 40, 40);
             const lines = [
                 `Lot généré le ${date}`,
-                `${puzzles.length} grilles - ${cfg.easy} Facile - ${cfg.medium} Moyen - ${cfg.hard} Difficile`,
+                `${puzzles.length} grilles - ${counts.easy} Facile - ${counts.medium} Moyen - ${counts.hard} Difficile`,
                 '',
                 '-  Chaque grille possède exactement une solution unique',
                 '-  Grilles Facile : Niveau débutant, remplissage par logique simple',
                 '-  Grilles Moyen : Niveau intermédiaire, analyse logique plus poussée',
-                '-  Grilles Difficile : Niveau expert, nécessite des techniques avancées',
+                '-  Grilles Difficile : Niveau expert, au-delà des techniques de base',
                 '-  Toutes les solutions sont vérifiées informatiquement',
                 '-  Aucune grille en double dans ce lot',
                 '',
@@ -512,7 +634,7 @@ document.addEventListener('DOMContentLoaded', () => {
             });
 
             pdf.save(`Sudoku_Perpignan_Lot_${puzzles.length}.pdf`);
-            setProgress(puzzles.length, puzzles.length, `✓ ${puzzles.length} grilles vérifiées et exportées`);
+            setProgress(puzzles.length, puzzles.length, batchDoneLabel(puzzles.length, cfg.total));
 
         } catch (err) {
             console.error(err);
@@ -588,6 +710,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 setProgress(done, total, 'Génération')
             );
 
+            if (puzzles.length === 0) { alert('Aucune grille n’a pu être générée.'); return; }
+
             setProgress(0, puzzles.length, 'Création des PNG');
             await new Promise(r => setTimeout(r, 0));
 
@@ -614,7 +738,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const zipBlob = await zip.generateAsync({ type: 'blob' });
             saveAs(zipBlob, `Sudoku_Perpignan_Lot_${puzzles.length}.zip`);
-            setProgress(puzzles.length, puzzles.length, `✓ ${puzzles.length} grilles vérifiées et exportées`);
+            setProgress(puzzles.length, puzzles.length, batchDoneLabel(puzzles.length, cfg.total));
 
         } catch (err) {
             console.error(err);

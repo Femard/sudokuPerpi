@@ -1,3 +1,12 @@
+/* Outfit (SIL OFL) — self-hosted variable font, latin subset (covers French accents) */
+@font-face {
+    font-family: 'Outfit';
+    font-style: normal;
+    font-weight: 300 700;
+    font-display: swap;
+    src: url(fonts/outfit-latin.woff2) format('woff2');
+}
+
 :root {
     /* Colors representing Perpignan / Catalans */
     --sang-et-or-red: #da121a; /* True Catalan red */
@@ -140,12 +149,15 @@ h1 {
     display: flex;
     justify-content: center;
     align-items: center;
+    font-family: inherit;
     font-size: 1.5rem;
     font-weight: 700;
+    padding: 0;
     cursor: pointer;
     background: var(--board-bg);
     transition: background-color 0.1s;
     user-select: none;
+    touch-action: manipulation;
 }
 
 /* Grid borders for 3x3 blocks */
@@ -164,6 +176,28 @@ h1 {
 }
 .cell.error { background: var(--cell-error) !important; animation: shake 0.4s; }
 
+/* Keyboard focus: an inset ring so it isn't clipped by the board's overflow:hidden */
+.cell:focus-visible,
+.palette-btn:focus-visible,
+.btn:focus-visible,
+select:focus-visible,
+.batch-input:focus-visible {
+    outline: 3px solid var(--text-primary);
+    outline-offset: -3px;
+}
+.btn:focus-visible,
+.palette-btn:focus-visible,
+select:focus-visible { outline-offset: 2px; }
+
+/* Live status line under the board (check result, hints, victory) */
+.status {
+    min-height: 1.4em;
+    text-align: center;
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+}
+
 /* Palette */
 .palette-container {
     display: flex;
@@ -176,6 +210,12 @@ h1 {
 .palette-instruction {
     font-size: 0.9rem;
     color: var(--text-secondary);
+}
+
+.palette-hint {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    text-align: center;
 }
 
 .letter-palette {
@@ -193,12 +233,15 @@ h1 {
     display: flex;
     justify-content: center;
     align-items: center;
+    font-family: inherit;
     font-size: 1.2rem;
     font-weight: 700;
+    padding: 0;
     cursor: pointer;
     background: white;
     box-shadow: var(--shadow-sm);
     transition: var(--transition);
+    touch-action: manipulation;
 }
 
 .palette-btn:hover {

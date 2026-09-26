@@ -1,27 +1,38 @@
 document.addEventListener('DOMContentLoaded', () => {
+    // Letters are red (sang) or gold (or) only. The two P (1, 4) and the two N (7, 9) are
+    // told apart by colour, so each pair has one red and one gold.
+    const TONES = {
+        red: { colorClass: 'c-red', colorName: 'rouge', cssVar: '--letter-red' },
+        gold: { colorClass: 'c-gold', colorName: 'dorée', cssVar: '--letter-gold' }
+    };
     const MAPPING = {
-        1: { char: 'P', colorClass: 'c1', colorName: 'rouge' },
-        2: { char: 'E', colorClass: 'c2', colorName: 'orange' },
-        3: { char: 'R', colorClass: 'c3', colorName: 'jaune' },
-        4: { char: 'P', colorClass: 'c4', colorName: 'vert' },
-        5: { char: 'I', colorClass: 'c5', colorName: 'turquoise' },
-        6: { char: 'G', colorClass: 'c6', colorName: 'bleu' },
-        7: { char: 'N', colorClass: 'c7', colorName: 'indigo' },
-        8: { char: 'A', colorClass: 'c8', colorName: 'violet' },
-        9: { char: 'N', colorClass: 'c9', colorName: 'rose' }
+        1: { char: 'P', tone: 'red' },
+        2: { char: 'E', tone: 'gold' },
+        3: { char: 'R', tone: 'red' },
+        4: { char: 'P', tone: 'gold' },
+        5: { char: 'I', tone: 'red' },
+        6: { char: 'G', tone: 'gold' },
+        7: { char: 'N', tone: 'red' },
+        8: { char: 'A', tone: 'gold' },
+        9: { char: 'N', tone: 'gold' }
     };
+    Object.values(MAPPING).forEach(m => Object.assign(m, TONES[m.tone]));
 
-    const PDF_COLORS = {
-        1: [229, 57, 53], 2: [245, 124, 0], 3: [251, 192, 45],
-        4: [67, 160, 71], 5: [0, 172, 193], 6: [30, 136, 229],
-        7: [57, 73, 171], 8: [142, 36, 170], 9: [216, 27, 96]
-    };
-
-    const CANVAS_COLORS = {
-        1: '#e53935', 2: '#f57c00', 3: '#fbc02d',
-        4: '#43a047', 5: '#00acc1', 6: '#1e88e5',
-        7: '#3949ab', 8: '#8e24aa', 9: '#d81b60'
-    };
+    // The two colours are defined once, in style.css; the PDF and PNG exports read them
+    // from there so the screen and the printed pages can never drift apart.
+    const toneHex = {};
+    for (const [tone, t] of Object.entries(TONES)) {
+        const hex = getComputedStyle(document.documentElement).getPropertyValue(t.cssVar).trim();
+        if (!/^#[0-9a-f]{6}$/i.test(hex)) throw new Error(`${t.cssVar} must be a #rrggbb colour in style.css (got "${hex}")`);
+        toneHex[tone] = hex;
+    }
+    const hexToRgb = hex => [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16));
+    const PDF_COLORS = {};
+    const CANVAS_COLORS = {};
+    for (const [digit, m] of Object.entries(MAPPING)) {
+        PDF_COLORS[digit] = hexToRgb(toneHex[m.tone]);
+        CANVAS_COLORS[digit] = toneHex[m.tone];
+    }
 
     let generator = new SudokuGenerator();
     let currentSolved = null;
@@ -444,22 +455,26 @@ document.addEventListener('DOMContentLoaded', () => {
     function drawGridOnPdf(pdf, board, left, top, cellSize) {
         const size = cellSize * 9;
 
-        // Pass 1 — thin grey inner lines (skip box boundaries)
-        pdf.setLineWidth(0.25);
-        pdf.setDrawColor(190, 190, 190);
+        // Pass 1 — thin grey inner lines (skip box boundaries), 0.5 pt
+        pdf.setLineCap('butt');
+        pdf.setLineWidth(PdfLayout.INNER_LINE_PT * PdfLayout.PT_TO_MM);
+        pdf.setDrawColor(150, 150, 150);
         for (let i = 1; i <= 8; i++) {
             if (i % 3 === 0) continue;
             pdf.line(left, top + i * cellSize, left + size, top + i * cellSize);
             pdf.line(left + i * cellSize, top, left + i * cellSize, top + size);
         }
 
-        // Pass 2 — thick red box borders and outer frame on top
+        // Pass 2 — thick red box borders and outer frame on top (1.75 pt). Projecting
+        // caps extend each line by half its width so the frame corners are filled.
+        pdf.setLineCap('projecting');
         pdf.setLineWidth(PdfLayout.GRID_LINE);
         pdf.setDrawColor(218, 18, 26);
         for (let i = 0; i <= 9; i += 3) {
             pdf.line(left, top + i * cellSize, left + size, top + i * cellSize);
             pdf.line(left + i * cellSize, top, left + i * cellSize, top + size);
         }
+        pdf.setLineCap('butt');
 
         // Letters — baseline:'middle' places the glyph center at (cx, cy) exactly
         pdf.setFont('helvetica', 'bold');
@@ -503,7 +518,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // ─── PDF format ───────────────────────────────────────────────────────────
 
     function getPdfFormat() {
-        const perPage = el => [1, 2, 4].includes(parseInt(el.value)) ? parseInt(el.value) : 2;
+        const perPage = el => [1, 2, 4, 6].includes(parseInt(el.value)) ? parseInt(el.value) : 1;
         return {
             page: PdfLayout.PAGE_SIZES[pdfPageSizeSel.value] || PdfLayout.PAGE_SIZES.a4,
             puzzlesPerPage: perPage(pdfPuzzlesPerPageSel),
@@ -585,7 +600,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 pdf.setFontSize(10);
                 pdf.setTextColor(150, 150, 150);
                 pdf.setFont('helvetica', 'normal');
-                pdf.text(`Sudoku Perpignan - Page ${pageNum}`, centerX(), H - 8, { align: 'center' });
+                pdf.text(`Sudoku Perpignan - Page ${pageNum}`, centerX(), PdfLayout.footerY(H), { align: 'center' });
             };
 
             // Largest font size (up to `size`) at which every text fits in `maxW` mm.
@@ -618,9 +633,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (n > 0) { centered(`- ${n} ${label}`, yOffset, 14, 'bold', [80, 80, 80]); yOffset += 10 * vk; }
             }
 
-            // Grids laid out 1, 2 or 4 per page, each with its title, inside the margins.
-            const drawGridPages = (boards, perPage, titleFor, color) => {
-                const titlePt = perPage === 4 ? 11 : 14;
+            // Grids laid out 1, 2, 4 or 6 per page, each under a sober header such as
+            // "Grille 01 — Facile", inside the margins.
+            const numDigits = Math.max(2, String(puzzles.length).length);
+            const num = i => String(i + 1).padStart(numDigits, '0');
+            const drawGridPages = (boards, perPage, titleFor) => {
+                const titlePt = perPage >= 4 ? 10 : 13;
                 let slots;
                 boards.forEach((board, i) => {
                     if (i % perPage === 0) {
@@ -629,7 +647,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                     const slot = slots[i % perPage];
                     const title = titleFor(i);
-                    pdf.setTextColor(...color);
+                    pdf.setTextColor(60, 60, 60);
                     pdf.setFontSize(fitSize([title], titlePt, 'bold', slot.size));
                     pdf.text(title, slot.cx, slot.titleY, { align: 'center' });
                     drawGridOnPdf(pdf, board, slot.gridX, slot.gridY, slot.size / 9);
@@ -638,7 +656,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // — Puzzle pages —
             drawGridPages(puzzles.map(p => p.puzzle), fmt.puzzlesPerPage,
-                i => `#${i + 1} - ${puzzles[i].difficulty}`, [218, 18, 26]);
+                i => `Grille ${num(i)} — ${puzzles[i].difficulty}`);
 
             // — Divider page for Solutions —
             beginPage();
@@ -646,7 +664,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // — Answer pages —
             drawGridPages(puzzles.map(p => p.solved), fmt.solutionsPerPage,
-                i => `Solution #${i + 1} - ${puzzles[i].difficulty}`, [43, 130, 65]);
+                i => `Solution ${num(i)} — ${puzzles[i].difficulty}`);
 
             // — Quality certificate on last page —
             beginPage();

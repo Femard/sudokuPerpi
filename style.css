@@ -22,16 +22,10 @@
     --cell-bg-given: #fdfdfd;
     --cell-error: #ffcdd2;
     
-    /* Letter specific colors (9 distinct colors) */
-    --color-1: #e53935; /* Red (P1) */
-    --color-2: #f57c00; /* Orange (E) */
-    --color-3: #fbc02d; /* Gold (R) */
-    --color-4: #43a047; /* Green (P2) */
-    --color-5: #00acc1; /* Teal (I) */
-    --color-6: #1e88e5; /* Blue (G) */
-    --color-7: #3949ab; /* Indigo (N1) */
-    --color-8: #8e24aa; /* Purple (A) */
-    --color-9: #d81b60; /* Pink (N2) */
+    /* Letters use only the two colours of the Catalan flag. app.js reads these two
+       values (#rrggbb) to colour the PDF and PNG exports too, so change them here only. */
+    --letter-red: #da121a;  /* sang */
+    --letter-gold: #c99700; /* or — a deep gold: the flag yellow is unreadable as text on white */
 
     
     /* Shadows & Transitions */
@@ -270,16 +264,10 @@ select:focus-visible { outline-offset: 2px; }
     margin-top: 10px;
 }
 
-/* Typography Colors for the 9 distinct characters */
-.c1 { color: var(--color-1); }
-.c2 { color: var(--color-2); }
-.c3 { color: var(--color-3); }
-.c4 { color: var(--color-4); }
-.c5 { color: var(--color-5); }
-.c6 { color: var(--color-6); }
-.c7 { color: var(--color-7); }
-.c8 { color: var(--color-8); }
-.c9 { color: var(--color-9); }
+/* Letter colours: red (sang) or gold (or). The two P and the two N each get one of
+   each, so they stay distinguishable. */
+.c-red { color: var(--letter-red); }
+.c-gold { color: var(--letter-gold); }
 
 /* Given cells have a slightly muted color or stay vivid but distinct */
 .cell.given { opacity: 0.9; }

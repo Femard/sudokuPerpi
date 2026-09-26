@@ -32,7 +32,7 @@ app.js  ── état { currentSolved, currentPuzzle, userBoard } ──▶ rendu
 
 ## 2. Le moteur : `sudoku.js`
 
-Une grille est un tableau `9×9` de nombres `0` (case vide) à `9`. Les couleurs et lettres associées à chaque chiffre sont définies côté interface (`MAPPING` dans [app.js:2-12](app.js#L2-L12)) — le moteur ne manipule que des chiffres.
+Une grille est un tableau `9×9` de nombres `0` (case vide) à `9`. Les couleurs et lettres associées à chaque chiffre sont définies côté interface (`MAPPING` dans [app.js:8-18](app.js#L8-L18)) — le moteur ne manipule que des chiffres.
 
 ### 2.1 Le solveur (`_search`)
 
@@ -95,7 +95,7 @@ Tout le code est dans un unique listener `DOMContentLoaded` ([app.js:1](app.js#L
 
 ### 3.1 État de la partie
 
-Quatre grilles/valeurs sont maintenues en mémoire ([app.js:26-35](app.js#L26-L35)) :
+Quatre grilles/valeurs sont maintenues en mémoire ([app.js:37-46](app.js#L37-L46)) :
 
 | Variable | Rôle |
 |---|---|
@@ -104,19 +104,19 @@ Quatre grilles/valeurs sont maintenues en mémoire ([app.js:26-35](app.js#L26-L3
 | `userBoard` | ce que le joueur a rempli — c'est elle qui est affichée |
 | `selectedCell` / `selectedNumber` | case et lettre actuellement sélectionnées |
 
-`startNewGame()` ([app.js:105-117](app.js#L105-L117)) appelle `generator.generatePuzzle(diff)`, clone `puzzleData` deux fois (une copie de référence `currentPuzzle`, une copie de travail `userBoard`) et réinitialise l'état visuel (sélection, message de statut, minuteur de victoire).
+`startNewGame()` ([app.js:116-128](app.js#L116-L128)) appelle `generator.generatePuzzle(diff)`, clone `puzzleData` deux fois (une copie de référence `currentPuzzle`, une copie de travail `userBoard`) et réinitialise l'état visuel (sélection, message de statut, minuteur de victoire).
 
 ### 3.2 Rendu et sélection
 
-`renderBoard()` ([app.js:155-183](app.js#L155-L183)) reconstruit les 81 cases à chaque nouvelle partie. Chaque case est un vrai `<button>` (pas une `<div>`), ce qui la rend focusable et activable au clavier nativement. Les cases *données* reçoivent la classe `given` et ne peuvent pas être modifiées.
+`renderBoard()` ([app.js:166-194](app.js#L166-L194)) reconstruit les 81 cases à chaque nouvelle partie. Chaque case est un vrai `<button>` (pas une `<div>`), ce qui la rend focusable et activable au clavier nativement. Les cases *données* reçoivent la classe `given` et ne peuvent pas être modifiées.
 
-**Navigation clavier** : un seul `<button>` de la grille a `tabindex="0"` à la fois (*roving tabindex*, [app.js:196-205](app.js#L196-L205)) — Tab n'arrête donc la navigation qu'une fois sur la grille, puis les flèches déplacent la sélection à l'intérieur (`moveSelection`, [app.js:282-286](app.js#L282-L286)), bornées aux limites de la grille. C'est la manière standard d'implémenter un composant type « grille » accessible.
+**Navigation clavier** : un seul `<button>` de la grille a `tabindex="0"` à la fois (*roving tabindex*, [app.js:207-216](app.js#L207-L216)) — Tab n'arrête donc la navigation qu'une fois sur la grille, puis les flèches déplacent la sélection à l'intérieur (`moveSelection`, [app.js:293-297](app.js#L293-L297)), bornées aux limites de la grille. C'est la manière standard d'implémenter un composant type « grille » accessible.
 
-Chaque case porte un `aria-label` recalculé à chaque changement (`updateCellLabel`, [app.js:187-194](app.js#L187-L194)) du type « Ligne 3, colonne 5, lettre P vert » : comme deux lettres (P et N) apparaissent deux fois chacune, la couleur fait partie de la description pour lever l'ambiguïté au clavier/lecteur d'écran, exactement comme un joueur voyant s'appuie sur elle.
+Chaque case porte un `aria-label` recalculé à chaque changement (`updateCellLabel`, [app.js:198-205](app.js#L198-L205)) du type « Ligne 3, colonne 5, lettre P dorée » : comme deux lettres (P et N) apparaissent deux fois chacune, la couleur fait partie de la description pour lever l'ambiguïté au clavier/lecteur d'écran, exactement comme un joueur voyant s'appuie sur elle.
 
 ### 3.3 Saisie
 
-Trois façons de poser une lettre, toutes convergent vers `updateCell(cell, val)` ([app.js:214-228](app.js#L214-L228)) :
+Trois façons de poser une lettre, toutes convergent vers `updateCell(cell, val)` ([app.js:225-239](app.js#L225-L239)) :
 1. **Palette puis case** : cliquer une lettre de la palette la sélectionne (`selectedNumber`), puis cliquer une case l'y place.
 2. **Case puis palette** : cliquer une case la sélectionne, puis cliquer une lettre l'y place immédiatement.
 3. **Clavier** : case sélectionnée + touche `1`-`9` (correspond à la position dans P-E-R-P-I-G-N-A-N), `Suppr`/`Retour arrière`/`0` pour effacer, `Espace` pour effacer la case focalisée.
@@ -125,32 +125,32 @@ Trois façons de poser une lettre, toutes convergent vers `updateCell(cell, val)
 
 ### 3.4 Victoire
 
-`checkWinCondition()` ([app.js:259-268](app.js#L259-L268)) compare `userBoard` à `currentSolved` case par case après chaque saisie. Un drapeau `won` évite de redéclencher la modale en boucle si le joueur continue à modifier une grille déjà complète et correcte. À la victoire, un message de statut apparaît puis la modale s'ouvre après un court délai (300 ms, pour laisser voir la dernière lettre posée).
+`checkWinCondition()` ([app.js:270-279](app.js#L270-L279)) compare `userBoard` à `currentSolved` case par case après chaque saisie. Un drapeau `won` évite de redéclencher la modale en boucle si le joueur continue à modifier une grille déjà complète et correcte. À la victoire, un message de statut apparaît puis la modale s'ouvre après un court délai (300 ms, pour laisser voir la dernière lettre posée).
 
-La modale ([app.js:270-280](app.js#L270-L280)) déplace le focus sur son bouton *Fermer* à l'ouverture, le piège à l'intérieur avec `Tab` tant qu'elle est ouverte, se ferme avec `Échap`, et **rend le focus** à l'élément qui l'avait avant ouverture — le cycle focus standard d'une boîte de dialogue accessible.
+La modale ([app.js:281-291](app.js#L281-L291)) déplace le focus sur son bouton *Fermer* à l'ouverture, le piège à l'intérieur avec `Tab` tant qu'elle est ouverte, se ferme avec `Échap`, et **rend le focus** à l'élément qui l'avait avant ouverture — le cycle focus standard d'une boîte de dialogue accessible.
 
 ### 3.5 Export d'une seule grille
 
-- **PNG** ([`exportToPng`](app.js#L315-L334)) : `html2canvas` capture le `<div id="capture-area">` (le plateau) tel qu'affiché à l'écran et déclenche un téléchargement.
-- **PDF** ([`exportToPdf`](app.js#L336-L378)) : dessine la grille en **vectoriel** avec jsPDF plutôt que de rasteriser une capture d'écran — texte net à n'importe quel zoom, fichier plus léger. `drawGridOnPdf` ([app.js:444-482](app.js#L444-L482)) trace d'abord les fines lignes grises intérieures, puis par-dessus les épaisses lignes rouges des blocs 3×3 (pour qu'elles ne soient jamais recouvertes), puis les lettres centrées avec `baseline: 'middle'`.
+- **PNG** ([`exportToPng`](app.js#L326-L345)) : `html2canvas` capture le `<div id="capture-area">` (le plateau) tel qu'affiché à l'écran et déclenche un téléchargement.
+- **PDF** ([`exportToPdf`](app.js#L347-L389)) : dessine la grille en **vectoriel** avec jsPDF plutôt que de rasteriser une capture d'écran — texte net à n'importe quel zoom, fichier plus léger. `drawGridOnPdf` ([app.js:455-497](app.js#L455-L497)) trace d'abord les fines lignes grises intérieures, puis par-dessus les épaisses lignes rouges des blocs 3×3 (pour qu'elles ne soient jamais recouvertes), puis les lettres centrées avec `baseline: 'middle'`.
 
 ### 3.6 Génération d'un lot
 
-`generateBatchPuzzles(config, onProgress)` ([app.js:389-439](app.js#L389-L439)) génère les grilles demandées niveau par niveau (Facile puis Moyen puis Difficile) :
+`generateBatchPuzzles(config, onProgress)` ([app.js:400-450](app.js#L400-L450)) génère les grilles demandées niveau par niveau (Facile puis Moyen puis Difficile) :
 - Chaque grille générée est acceptée seulement si `result.levelMet` est vrai **et** que son empreinte (`fingerprint`) n'a pas déjà été vue dans ce lot — ce qui garantit zéro doublon exact dans un même export.
 - `await new Promise(r => setTimeout(r, 0))` avant chaque génération rend la main au navigateur entre deux grilles, pour que la barre de progression s'anime au lieu de geler l'interface.
 - Si 200 générations d'affilée sont rejetées (doublon ou niveau non atteint), la boucle abandonne ce niveau plutôt que de tourner indéfiniment — filet de sécurité pour les cas limites (ex. demander 500 grilles « Difficile » avec un très petit nombre de tentatives).
 - Une **passe de vérification finale** ré-résout indépendamment chaque grille du lot et rejette celles qui ne correspondent pas à leur solution stockée (`verifySolutionMatch`) — une seconde ligne de défense après celle déjà faite dans `generatePuzzle`.
 
-Le nombre de grilles réellement obtenues peut donc être inférieur au nombre demandé. `countByLevel` et `batchDoneLabel` ([app.js:531-541](app.js#L531-L541)) s'assurent que la page de couverture, le certificat et le message final du PDF affichent toujours les quantités **réelles**, jamais celles demandées au départ.
+Le nombre de grilles réellement obtenues peut donc être inférieur au nombre demandé. `countByLevel` et `batchDoneLabel` ([app.js:546-556](app.js#L546-L556)) s'assurent que la page de couverture, le certificat et le message final du PDF affichent toujours les quantités **réelles**, jamais celles demandées au départ.
 
 ### 3.7 Export PDF du lot
 
 `exportBatchPdf()` construit un document multi-pages avec jsPDF, dans le format choisi par l'utilisateur (panneau « Format du PDF », lu par `getPdfFormat()`) :
 1. Page de couverture (titre, date, décompte par niveau réel).
-2. Pages de puzzles, 1, 2 ou 4 grilles par page, dessinées avec le même `drawGridOnPdf` que l'export simple.
+2. Pages de puzzles, 1 grille par page par défaut (2 ou 4 au choix), chacune sous un en-tête sobre « Grille 01 — Facile », dessinées avec le même `drawGridOnPdf` que l'export simple.
 3. Page de séparation « Solutions ».
-4. Pages de solutions, 1, 2 ou 4 grilles par page (réglage indépendant des puzzles).
+4. Pages de solutions, 4 grilles par page par défaut (1, 2 ou 6 au choix, réglage indépendant des puzzles) : de vraies mini-grilles vectorielles complètes, sous un en-tête « Solution 01 — Facile ».
 5. Certificat de qualité récapitulant les garanties (solution unique, aucune grille en double, etc.), avec les vrais chiffres du lot.
 
 `beginPage()` crée chaque page, calcule ses marges selon sa parité et y pose le numéro de page. Les textes de la couverture, du séparateur et du certificat sont ajustés à la largeur utile (`fitSize`), donc rien ne déborde même sur un petit format.
@@ -163,18 +163,20 @@ Toute la géométrie est isolée dans des fonctions pures, testables sans naviga
 |---|---|
 | `clampGutter(mm)` | force la marge de reliure entre **12,7 mm** (0,5 po) et 30 mm, quoi qu'il soit saisi (vide, texte, négatif…) |
 | `pageMargins(n, gutter, mirror)` | marges de la page `n`. La page 1 est une page de droite (recto), donc reliure à gauche ; les pages paires ont la reliure à droite. Sans « marges miroir », la reliure reste toujours à gauche |
-| `gridSlots(w, h, margins, perPage)` | position et taille de chaque grille (1, 2 ou 4 par page), titre compris, à l'intérieur des marges |
+| `gridSlots(w, h, margins, perPage)` | position et taille de chaque grille (1, 2, 4 ou 6 par page : 1×1, 1×2, 2×2 ou 2×3), titre compris, à l'intérieur des marges. Une grille seule est centrée verticalement sur la page |
+| `footerY(h)` | position du numéro de page, à 11 mm du bord bas pour que l'encre reste dans la zone de sécurité |
 | `cellSize(w, h, gutter, perPage)` | taille d'une case en mm, utilisée pour l'indication affichée sous le panneau |
 
 Points à connaître :
-- Le cadre rouge de la grille fait 1,1 mm d'épaisseur, centré sur le bord : `gridSlots` le compte, donc c'est l'**encre visible** (et pas seulement le tracé théorique) qui respecte la marge.
-- Marge extérieure 12,7 mm, haut 15 mm, bas 18 mm (place pour le numéro de page).
+- Épaisseurs de trait exprimées en points, comme dans un cahier des charges d'impression : 0,5 pt entre les cases, 1,75 pt pour les blocs 3×3 et le cadre extérieur (fourchette demandée : 1,5 à 2 pt). Les extrémités des traits épais sont « projetantes » pour que les coins du cadre soient pleins.
+- Le cadre rouge est centré sur le bord de la grille : `gridSlots` compte sa demi-épaisseur, donc c'est l'**encre visible** (et pas seulement le tracé théorique) qui respecte la marge.
+- Marges : extérieure 12,7 mm, haut 15 mm, bas 18 mm, toutes au-dessus de la **zone de sécurité de 9,5 mm** (0,375 po) sous laquelle rien, texte ou graphique, ne doit se trouver. Le numéro de page en fait partie : il est posé à 11 mm du bord (encre à ≥ 10,2 mm).
 - À reliure minimale, la marge intérieure est de 12,7 mm sur tous les formats. Sur les petits formats (A5, 6×9 po) avec 4 grilles par page ou une reliure très large, les cases deviennent petites : l'interface affiche alors un avertissement en rouge sous les options (seuil : cases < 6 mm).
 - Le ZIP de PNG n'est pas concerné par ces réglages.
 
 ### 3.8 Export ZIP du lot
 
-`exportBatchZip()` ([app.js:738-786](app.js#L738-L786)) suit la même génération, mais rend chaque grille comme une image PNG via `<canvas>` (`drawPuzzleCanvas`, [app.js:684-732](app.js#L684-L732), rendu à `SCALE=3` pour la netteté) plutôt qu'en PDF vectoriel — plus adapté à une distribution image par image. Les images sont rangées dans deux dossiers (`puzzles/`, `solutions/`) d'une archive JSZip, puis téléchargées via FileSaver (`saveAs`).
+`exportBatchZip()` ([app.js:756-804](app.js#L756-L804)) suit la même génération, mais rend chaque grille comme une image PNG via `<canvas>` (`drawPuzzleCanvas`, [app.js:702-750](app.js#L702-L750), rendu à `SCALE=3` pour la netteté) plutôt qu'en PDF vectoriel — plus adapté à une distribution image par image. Les images sont rangées dans deux dossiers (`puzzles/`, `solutions/`) d'une archive JSZip, puis téléchargées via FileSaver (`saveAs`).
 
 ## 4. Sécurité et robustesse
 
@@ -185,7 +187,7 @@ Points à connaître :
 
 ## 5. Tests
 
-`test/pdf-layout.test.js` vérifie la géométrie du PDF pour chaque taille de page × 1/2/4 grilles par page × marges miroir on/off × plusieurs reliures, sur plusieurs pages consécutives : les grilles (cadre compris) restent dans les marges, la marge intérieure est toujours ≥ 12,7 mm, aucune grille n'en chevauche une autre, et `clampGutter` refuse toute valeur sous 12,7 mm.
+`test/pdf-layout.test.js` vérifie la géométrie du PDF pour chaque taille de page × 1/2/4/6 grilles par page × marges miroir on/off × plusieurs reliures, sur plusieurs pages consécutives : les grilles (cadre compris) restent dans les marges, la marge intérieure est toujours ≥ 12,7 mm, les marges extérieure, haute et basse ≥ 9,5 mm, aucune grille n'en chevauche une autre, le pied de page reste dans la zone de sécurité, les épaisseurs de trait respectent le cahier des charges, et `clampGutter` refuse toute valeur sous 12,7 mm.
 
 `test/sudoku.test.js` (Node, module natif `node:test`, aucune dépendance) vérifie :
 - qu'une grille complète générée est valide (chaque ligne/colonne contient bien 1-9) ;
@@ -200,6 +202,8 @@ npm test
 
 ## 6. Pour aller plus loin
 
-- Les couleurs des 9 lettres sont volontairement fixes (identité visuelle du projet) — voir `MAPPING` dans [app.js:2-12](app.js#L2-L12) pour les lettres/couleurs CSS et `PDF_COLORS`/`CANVAS_COLORS` ([app.js:14-24](app.js#L14-L24)) pour leurs équivalents RGB utilisés dans les exports.
+- Les lettres n'utilisent que **deux couleurs**, le rouge (sang) et l'or, définies une seule fois dans `style.css` (`--letter-red`, `--letter-gold`). Au démarrage, [app.js:2-35](app.js#L2-L35) les relit pour colorer le PDF (`PDF_COLORS`) et les PNG du ZIP (`CANVAS_COLORS`) : l'écran et le papier ne peuvent donc pas diverger. Pour changer une teinte, il suffit de modifier la variable CSS.
+- `MAPPING` associe chaque chiffre à une teinte. Les deux P (1 et 4) et les deux N (7 et 9) ne se distinguent que par la couleur, donc chaque paire reçoit un rouge et un or ; c'est la contrainte à respecter si on retouche l'attribution.
+- L'or est un or soutenu (`#c99700`, contraste 2,65:1 sur blanc) et non le jaune exact du drapeau (`#fcd116`, 1,47:1), qui serait presque illisible en texte sur fond blanc.
 - Mettre à jour une librairie CDN implique de recalculer son hash SRI (commande dans le [README](README.md)).
 - Le moteur (`sudoku.js`) n'a aucune dépendance à `app.js` ni au DOM : il peut être réutilisé tel quel dans un autre contexte (Node, extension, etc.).

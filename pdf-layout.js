@@ -11,12 +11,24 @@ const PdfLayout = (() => {
 
     const MIN_GUTTER = 12.7;  // 0.5 in — smallest allowed binding (inner) margin
     const MAX_GUTTER = 30;
+    const SAFE_MARGIN = 9.5;  // 0.375 in — nothing (text or graphics) may come closer to the outer, top or bottom edge
     const OUTER = 12.7;       // outer (non-binding) side margin
     const TOP = 15;
     const BOTTOM = 18;        // leaves room for the page-number footer
     const GAP = 6;            // space between two grids on the same page
-    const GRID_LINE = 1.1;    // thickness of the red frame, centred on the grid edge
     const MIN_LEGIBLE_CELL = 6; // below this the letters get hard to read on paper
+
+    // Line weights are specified in points (as print specs are) and converted to mm.
+    const PT_TO_MM = 25.4 / 72;
+    const INNER_LINE_PT = 0.5;   // thin lines between cells
+    const THICK_LINE_PT = 1.75;  // 3x3 block lines and outer frame (spec: 1.5 to 2 pt)
+    const GRID_LINE = THICK_LINE_PT * PT_TO_MM; // frame thickness in mm, centred on the grid edge
+
+    // Page-number footer: 10 pt text whose baseline sits 11 mm above the bottom edge.
+    // Descenders reach about 0.8 mm below the baseline, so the ink stays above SAFE_MARGIN.
+    const FOOTER_BASELINE = 11;
+    const FOOTER_INK_BOTTOM = FOOTER_BASELINE - 0.8;
+    const footerY = pageH => pageH - FOOTER_BASELINE;
 
     // Keep the binding margin at or above the minimum, whatever was typed.
     function clampGutter(value) {
@@ -38,14 +50,15 @@ const PdfLayout = (() => {
         };
     }
 
-    // Positions of `perPage` (1, 2 or 4) titled grids inside the page margins.
+    // Positions of `perPage` (1, 2, 4 or 6) titled grids inside the page margins:
+    // 1 → 1×1 (grid centred on the page), 2 → 1×2, 4 → 2×2, 6 → 2×3.
     // Each entry: { cx, titleY, gridX, gridY, size } — `size` is the side of the grid
     // in mm, so a cell is size / 9. The grid's outer ink edge (frame included) never
     // crosses the margins.
     function gridSlots(pageW, pageH, margins, perPage) {
-        const cols = perPage === 4 ? 2 : 1;
-        const rows = perPage === 1 ? 1 : 2;
-        const titleH = perPage === 4 ? 9 : 12;
+        const cols = perPage >= 4 ? 2 : 1;
+        const rows = perPage === 1 ? 1 : perPage === 6 ? 3 : 2;
+        const titleH = perPage >= 4 ? 9 : 12;
         const areaW = pageW - margins.left - margins.right;
         const areaH = pageH - margins.top - margins.bottom;
         const slotW = (areaW - GAP * (cols - 1)) / cols;
@@ -57,8 +70,13 @@ const PdfLayout = (() => {
             for (let c = 0; c < cols; c++) {
                 const slotX = margins.left + c * (slotW + GAP);
                 const slotY = margins.top + r * (slotH + GAP);
-                const blockY = slotY + (slotH - (titleH + size)) / 2;
-                const gridY = blockY + titleH;
+                // Several grids: title + grid are centred as one block in their slot.
+                // A single grid is centred itself, the title using the space above it
+                // (unless the page is so short that the title needs that space).
+                const blockGridY = slotY + (slotH - (titleH + size)) / 2 + titleH;
+                const gridY = perPage === 1
+                    ? Math.max(slotY + (slotH - size) / 2, slotY + titleH)
+                    : blockGridY;
                 slots.push({
                     cx: slotX + slotW / 2,
                     titleY: gridY - titleH * 0.42,
@@ -78,8 +96,9 @@ const PdfLayout = (() => {
     }
 
     return {
-        PAGE_SIZES, MIN_GUTTER, MAX_GUTTER, GRID_LINE, MIN_LEGIBLE_CELL,
-        clampGutter, pageMargins, gridSlots, cellSize
+        PAGE_SIZES, MIN_GUTTER, MAX_GUTTER, SAFE_MARGIN, MIN_LEGIBLE_CELL,
+        PT_TO_MM, INNER_LINE_PT, THICK_LINE_PT, GRID_LINE, FOOTER_INK_BOTTOM,
+        clampGutter, pageMargins, gridSlots, cellSize, footerY
     };
 })();
 

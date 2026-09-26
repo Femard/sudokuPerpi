@@ -59,6 +59,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const btnBatchPdf = document.getElementById('btn-batch-pdf');
     const btnBatchZip = document.getElementById('btn-batch-zip');
 
+    // DOM — PDF format
+    const pdfPageSizeSel = document.getElementById('pdf-page-size');
+    const pdfPuzzlesPerPageSel = document.getElementById('pdf-puzzles-per-page');
+    const pdfSolutionsPerPageSel = document.getElementById('pdf-solutions-per-page');
+    const pdfGutterInput = document.getElementById('pdf-gutter');
+    const pdfMirrorChk = document.getElementById('pdf-mirror');
+    const pdfFormatHint = document.getElementById('pdf-format-hint');
+
     initPalette();
     startNewGame();
 
@@ -80,6 +88,17 @@ document.addEventListener('DOMContentLoaded', () => {
     );
     btnBatchPdf.addEventListener('click', exportBatchPdf);
     btnBatchZip.addEventListener('click', exportBatchZip);
+
+    // PDF format listeners
+    [pdfPageSizeSel, pdfPuzzlesPerPageSel, pdfSolutionsPerPageSel, pdfMirrorChk].forEach(el =>
+        el.addEventListener('change', updatePdfFormatHint)
+    );
+    pdfGutterInput.addEventListener('input', updatePdfFormatHint);
+    pdfGutterInput.addEventListener('change', () => {
+        pdfGutterInput.value = PdfLayout.clampGutter(pdfGutterInput.value); // never below 12.7 mm
+        updatePdfFormatHint();
+    });
+    updatePdfFormatHint();
 
     // ─── Single game ─────────────────────────────────────────────────────────
 
@@ -435,7 +454,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         // Pass 2 — thick red box borders and outer frame on top
-        pdf.setLineWidth(1.1);
+        pdf.setLineWidth(PdfLayout.GRID_LINE);
         pdf.setDrawColor(218, 18, 26);
         for (let i = 0; i <= 9; i += 3) {
             pdf.line(left, top + i * cellSize, left + size, top + i * cellSize);
@@ -481,6 +500,32 @@ document.addEventListener('DOMContentLoaded', () => {
             : label;
     }
 
+    // ─── PDF format ───────────────────────────────────────────────────────────
+
+    function getPdfFormat() {
+        const perPage = el => [1, 2, 4].includes(parseInt(el.value)) ? parseInt(el.value) : 2;
+        return {
+            page: PdfLayout.PAGE_SIZES[pdfPageSizeSel.value] || PdfLayout.PAGE_SIZES.a4,
+            puzzlesPerPage: perPage(pdfPuzzlesPerPageSel),
+            solutionsPerPage: perPage(pdfSolutionsPerPageSel),
+            gutter: PdfLayout.clampGutter(pdfGutterInput.value),
+            mirror: pdfMirrorChk.checked
+        };
+    }
+
+    // Shows the resulting cell size and warns when letters would be too small to read.
+    function updatePdfFormatHint() {
+        const f = getPdfFormat();
+        const cell = perPage => PdfLayout.cellSize(f.page.w, f.page.h, f.gutter, perPage);
+        const puzzles = cell(f.puzzlesPerPage);
+        const solutions = cell(f.solutionsPerPage);
+        const fmt = mm => mm.toFixed(1).replace('.', ',');
+        const tooSmall = Math.min(puzzles, solutions) < PdfLayout.MIN_LEGIBLE_CELL;
+        pdfFormatHint.textContent = `Cases : ${fmt(puzzles)} mm (puzzles), ${fmt(solutions)} mm (solutions)`
+            + (tooSmall ? ' — lettres très petites, réduisez le nombre de grilles par page ou agrandissez le format.' : '.');
+        pdfFormatHint.classList.toggle('warn', tooSmall);
+    }
+
     // What was actually generated (may be less than requested if the generator
     // gave up on a level), so the PDF never advertises grids it doesn't contain.
     function countByLevel(puzzles) {
@@ -520,102 +565,92 @@ document.addEventListener('DOMContentLoaded', () => {
             setProgress(0, 1, 'Construction du PDF...');
             await new Promise(r => setTimeout(r, 0));
 
+            const fmt = getPdfFormat();
+            const W = fmt.page.w, H = fmt.page.h;
             const { jsPDF } = window.jspdf;
-            const pdf = new jsPDF('p', 'mm', 'a4');
+            const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: [W, H] });
             const date = new Date().toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' });
-            
-            let pageNum = 1;
-            const addFooter = () => {
+
+            // The binding margin alternates sides with the page parity (see pdf-layout.js).
+            let pageNum = 0;
+            let margins;
+            const contentW = () => W - margins.left - margins.right;
+            const centerX = () => margins.left + contentW() / 2;
+            const vk = H / 297; // cover / divider / certificate positions were designed on A4
+
+            const beginPage = () => {
+                if (pageNum > 0) pdf.addPage();
+                pageNum++;
+                margins = PdfLayout.pageMargins(pageNum, fmt.gutter, fmt.mirror);
                 pdf.setFontSize(10);
                 pdf.setTextColor(150, 150, 150);
                 pdf.setFont('helvetica', 'normal');
-                pdf.text(`Sudoku Perpignan - Page ${pageNum}`, 105, 290, { align: 'center' });
-                pageNum++;
+                pdf.text(`Sudoku Perpignan - Page ${pageNum}`, centerX(), H - 8, { align: 'center' });
+            };
+
+            // Largest font size (up to `size`) at which every text fits in `maxW` mm.
+            const fitSize = (texts, size, style, maxW = contentW()) => {
+                pdf.setFont('helvetica', style);
+                let s = size;
+                pdf.setFontSize(s);
+                while (s > 6 && Math.max(...texts.map(t => pdf.getTextWidth(t))) > maxW) {
+                    s -= 0.5;
+                    pdf.setFontSize(s);
+                }
+                return s;
+            };
+
+            // Text centred in the content area, shrunk if the page is narrow.
+            const centered = (text, y, size, style, [r, g, b]) => {
+                pdf.setTextColor(r, g, b);
+                pdf.setFontSize(fitSize([text], size, style));
+                pdf.text(text, centerX(), y, { align: 'center' });
             };
 
             // — Cover Page —
-            pdf.setFont('helvetica', 'bold');
-            pdf.setFontSize(40);
-            pdf.setTextColor(218, 18, 26);
-            pdf.text('Sudoku Perpignan', 105, 80, { align: 'center' });
-            
-            pdf.setFontSize(20);
-            pdf.setTextColor(245, 124, 0);
-            pdf.text('Livre de Puzzles', 105, 100, { align: 'center' });
-
-            pdf.setFontSize(14);
-            pdf.setTextColor(80, 80, 80);
-            pdf.setFont('helvetica', 'normal');
-            pdf.text(`Généré le ${date}`, 105, 130, { align: 'center' });
-            
-            pdf.text(`${puzzles.length} grilles au total :`, 105, 150, { align: 'center' });
-            pdf.setFont('helvetica', 'bold');
-            let yOffset = 165;
-            if (counts.easy > 0) { pdf.text(`- ${counts.easy} Facile`, 105, yOffset, { align: 'center' }); yOffset += 10; }
-            if (counts.medium > 0) { pdf.text(`- ${counts.medium} Moyen`, 105, yOffset, { align: 'center' }); yOffset += 10; }
-            if (counts.hard > 0) { pdf.text(`- ${counts.hard} Difficile`, 105, yOffset, { align: 'center' }); }
-            addFooter();
-
-            // — Puzzle pages (2 per page) —
-            const CELL = 12.5; // Reduced from 14.5 to fit 2 perfectly on A4
-            const BOARD = CELL * 9; // 112.5 mm
-            const LEFT = (210 - BOARD) / 2;
-
-            for (let i = 0; i < puzzles.length; i++) {
-                if (i % 2 === 0) {
-                    pdf.addPage();
-                    addFooter();
-                }
-                const startY = i % 2 === 0 ? 30 : 165; // Grid 1 at 30 (ends 142.5), Grid 2 at 165
-                pdf.setFont('helvetica', 'bold');
-                pdf.setFontSize(14);
-                pdf.setTextColor(218, 18, 26);
-                pdf.text(`#${i + 1} - ${puzzles[i].difficulty}`, 105, startY - 7, { align: 'center' });
-                drawGridOnPdf(pdf, puzzles[i].puzzle, LEFT, startY, CELL);
+            beginPage();
+            centered('Sudoku Perpignan', 80 * vk, 40, 'bold', [218, 18, 26]);
+            centered('Livre de Puzzles', 100 * vk, 20, 'bold', [245, 124, 0]);
+            centered(`Généré le ${date}`, 130 * vk, 14, 'normal', [80, 80, 80]);
+            centered(`${puzzles.length} grilles au total :`, 150 * vk, 14, 'normal', [80, 80, 80]);
+            let yOffset = 165 * vk;
+            for (const [n, label] of [[counts.easy, 'Facile'], [counts.medium, 'Moyen'], [counts.hard, 'Difficile']]) {
+                if (n > 0) { centered(`- ${n} ${label}`, yOffset, 14, 'bold', [80, 80, 80]); yOffset += 10 * vk; }
             }
+
+            // Grids laid out 1, 2 or 4 per page, each with its title, inside the margins.
+            const drawGridPages = (boards, perPage, titleFor, color) => {
+                const titlePt = perPage === 4 ? 11 : 14;
+                let slots;
+                boards.forEach((board, i) => {
+                    if (i % perPage === 0) {
+                        beginPage();
+                        slots = PdfLayout.gridSlots(W, H, margins, perPage);
+                    }
+                    const slot = slots[i % perPage];
+                    const title = titleFor(i);
+                    pdf.setTextColor(...color);
+                    pdf.setFontSize(fitSize([title], titlePt, 'bold', slot.size));
+                    pdf.text(title, slot.cx, slot.titleY, { align: 'center' });
+                    drawGridOnPdf(pdf, board, slot.gridX, slot.gridY, slot.size / 9);
+                });
+            };
+
+            // — Puzzle pages —
+            drawGridPages(puzzles.map(p => p.puzzle), fmt.puzzlesPerPage,
+                i => `#${i + 1} - ${puzzles[i].difficulty}`, [218, 18, 26]);
 
             // — Divider page for Solutions —
-            if (puzzles.length > 0) {
-                pdf.addPage();
-                addFooter();
-                pdf.setFont('helvetica', 'bold');
-                pdf.setFontSize(40);
-                pdf.setTextColor(43, 130, 65);
-                pdf.text('Solutions', 105, 140, { align: 'center' });
-            }
+            beginPage();
+            centered('Solutions', 140 * vk, 40, 'bold', [43, 130, 65]);
 
-            // — Answer pages (4 per page to save paper) —
-            const SOL_CELL = 9.5;
-            const SOL_BOARD = SOL_CELL * 9;
-
-            for (let i = 0; i < puzzles.length; i++) {
-                if (i % 4 === 0) {
-                    pdf.addPage();
-                    addFooter();
-                }
-                const col = i % 2;
-                const row = Math.floor((i % 4) / 2);
-                
-                const startX = col === 0 ? 15 : 210 - 15 - SOL_BOARD;
-                const startY = row === 0 ? 35 : 160;
-                
-                pdf.setFont('helvetica', 'bold');
-                pdf.setFontSize(11);
-                pdf.setTextColor(43, 130, 65);
-                pdf.text(`Solution #${i + 1} - ${puzzles[i].difficulty}`, startX + SOL_BOARD / 2, startY - 5, { align: 'center' });
-                drawGridOnPdf(pdf, puzzles[i].solved, startX, startY, SOL_CELL);
-            }
+            // — Answer pages —
+            drawGridPages(puzzles.map(p => p.solved), fmt.solutionsPerPage,
+                i => `Solution #${i + 1} - ${puzzles[i].difficulty}`, [43, 130, 65]);
 
             // — Quality certificate on last page —
-            pdf.addPage();
-            addFooter();
-            pdf.setFont('helvetica', 'bold');
-            pdf.setFontSize(18);
-            pdf.setTextColor(218, 18, 26);
-            pdf.text('Certificat de qualité', 105, 40, { align: 'center' });
-            pdf.setFont('helvetica', 'normal');
-            pdf.setFontSize(12);
-            pdf.setTextColor(40, 40, 40);
+            beginPage();
+            centered('Certificat de qualité', 40 * vk, 18, 'bold', [218, 18, 26]);
             const lines = [
                 `Lot généré le ${date}`,
                 `${puzzles.length} grilles - ${counts.easy} Facile - ${counts.medium} Moyen - ${counts.hard} Difficile`,
@@ -629,8 +664,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 '',
                 'Généré par Sudoku Perpignan Generator'
             ];
+            pdf.setFontSize(fitSize(lines, 12, 'normal'));
+            pdf.setTextColor(40, 40, 40);
             lines.forEach((line, idx) => {
-                pdf.text(line, 105, 60 + idx * 10, { align: 'center' });
+                pdf.text(line, centerX(), (60 + idx * 10) * vk, { align: 'center' });
             });
 
             pdf.save(`Sudoku_Perpignan_Lot_${puzzles.length}.pdf`);

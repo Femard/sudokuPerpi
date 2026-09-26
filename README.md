@@ -10,6 +10,7 @@ Application 100 % statique, sans build : ouvrir `index.html` ou servir le dossie
 - Partie interactive (3 niveaux), vérification, indice, effacement, jeu au clavier (flèches, touches 1-9).
 - Export PNG / PDF d'une grille.
 - Export par lot (jusqu'à 500 grilles) : PDF avec solutions et certificat, ou ZIP de PNG.
+- Format du PDF de lot au choix : taille de page (A4, A5, Lettre US, 6×9 po, 8×10 po), 1, 2 ou 4 grilles par page (puzzles et solutions séparément), marge de reliure (**minimum 12,7 mm**, jamais en dessous) et marges miroir pour l'impression recto-verso (la reliure alterne gauche/droite).
 
 ## Niveaux de difficulté
 Le niveau est défini par la technique nécessaire, pas seulement par le nombre d'indices (`levelOf` dans `sudoku.js`) :

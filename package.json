@@ -4,6 +4,6 @@
   "private": true,
   "description": "Sudoku aux lettres P-E-R-P-I-G-N-A-N, avec export PDF/PNG/ZIP",
   "scripts": {
-    "test": "node --test test/"
+    "test": "node --test"
   }
 }
